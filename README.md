@@ -117,6 +117,17 @@ npm run dev
 
 Frontend available at: http://localhost:3000
 
+### Loading fake data
+
+For local testing without real market data or a database:
+
+1. **Generate fake data** (from `backend/`):  
+   `python scripts/generate_fake_data.py --output-dir data/fake`
+2. **Load portfolios**: Use **POST /api/v1/portfolios/import** with `data/fake/portfolios_holdings.csv` (see [backend/README.md](backend/README.md)).
+3. **Use fake market data in the workflow**: Set `FAKE_MARKET_DATA_CSV=data/fake/market_data.csv` and start the backend; the scenario workflow will use the generated time series when portfolios have matching symbols.
+
+See **Fake data (development)** in [backend/README.md](backend/README.md) for full details.
+
 ### Running Tests
 
 ```bash

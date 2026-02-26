@@ -1,4 +1,7 @@
 """FastAPI application entry point."""
+import os
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.config.settings import settings
@@ -37,6 +40,12 @@ async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
 
+
+# Load fake market data at startup if configured (for local/dev)
+_fake_csv = os.environ.get("FAKE_MARKET_DATA_CSV")
+if _fake_csv and Path(_fake_csv).is_file():
+    from src.services import market_data_fake_store as _fake_store
+    _fake_store.load_from_csv(_fake_csv)
 
 # Import and include API routers
 from src.api.v1.router import api_router
