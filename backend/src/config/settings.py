@@ -1,4 +1,5 @@
 """Application settings loaded from environment variables."""
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
@@ -63,6 +64,12 @@ class Settings(BaseSettings):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # Expand shell-style env vars (e.g. ${REDIS_URL}) in URL fields (two passes for nested refs)
+        for _ in range(2):
+            self.database_url = os.path.expandvars(self.database_url)
+            self.redis_url = os.path.expandvars(self.redis_url)
+            self.celery_broker_url = os.path.expandvars(self.celery_broker_url)
+            self.celery_result_backend = os.path.expandvars(self.celery_result_backend)
         # Build database URL if not provided
         if not self.database_url:
             self.database_url = (
@@ -72,7 +79,7 @@ class Settings(BaseSettings):
         # Build Redis URL if not provided
         if not self.redis_url:
             self.redis_url = f"redis://{self.redis_host}:{self.redis_port}/0"
-        # Set Celery URLs if not provided
+        # Set Celery URLs if not provided (after building redis_url)
         if not self.celery_broker_url:
             self.celery_broker_url = self.redis_url
         if not self.celery_result_backend:
