@@ -63,6 +63,14 @@ class Holding(HoldingBase):
         from_attributes = True
 
 
+class PortfolioListResponse(BaseModel):
+    """Paginated list of portfolios."""
+    total: int = Field(..., description="Total number of portfolios matching the filter")
+    skip: int = Field(..., description="Number of items skipped")
+    limit: int = Field(..., description="Page size")
+    portfolios: List[Portfolio] = Field(default_factory=list, description="Portfolios in this page")
+
+
 class PortfolioWithHoldings(Portfolio):
     """Portfolio schema with holdings."""
     holdings: List[Holding] = []
