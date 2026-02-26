@@ -1,0 +1,25 @@
+portfolio_name,portfolio_description
+Global Equity Fund,Diversified global equity portfolio
+symbol,company_name,quantity,average_price,sector
+AAPL,Apple Inc.,385,131,technology
+MSFT,Microsoft Corporation,263,241,technology
+GOOGL,Alphabet Inc.,213,269,technology
+XOM,Exxon Mobil Corporation,359,242,energy
+JPM,JPMorgan Chase & Co.,460,140,financial_services
+JNJ,Johnson & Johnson,406,128,healthcare
+portfolio_name,portfolio_description
+Tech Growth,Technology-focused growth portfolio
+symbol,company_name,quantity,average_price,sector
+GOOGL,Alphabet Inc.,213,269,technology
+XOM,Exxon Mobil Corporation,359,242,energy
+JPM,JPMorgan Chase & Co.,460,140,financial_services
+JNJ,Johnson & Johnson,406,128,healthcare
+V,Visa Inc.,374,205,financial_services
+PG,Procter & Gamble,244,208,consumer_staples
+portfolio_name,portfolio_description
+Energy & Finance,Energy and financial services mix
+symbol,company_name,quantity,average_price,sector
+JPM,JPMorgan Chase & Co.,460,140,financial_services
+JNJ,Johnson & Johnson,406,128,healthcare
+V,Visa Inc.,374,205,financial_services
+PG,Procter & Gamble,244,208,consumer_staples

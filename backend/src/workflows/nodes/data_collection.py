@@ -8,18 +8,50 @@ from src.workflows.state import ScenarioAnalysisStateTypedDict
 logger = logging.getLogger(__name__)
 
 
+def _resolve_symbols_from_holdings(portfolio_ids: list[str]) -> list[str]:
+    """Collect unique symbols from holdings in the given portfolios."""
+    from src.services import portfolio_service as svc
+
+    symbols: set[str] = set()
+    for pid in portfolio_ids:
+        result = svc.list_holdings(pid, skip=0, limit=10_000)
+        if result:
+            for h in result[0]:
+                symbols.add(h.symbol)
+    return sorted(symbols)
+
+
 def _collect_market_data(scenario_id: str, portfolio_ids: list[str]) -> dict[str, Any]:
     """
-    Stub: gather market data for the given scenario and portfolios.
-    TODO: Replace with market data service call (resolve holdings, fetch from providers, normalize).
+    Gather market data: resolve symbols from portfolio holdings; if fake store has data, use it.
+    Otherwise return stub (empty symbols/data).
     """
-    # Placeholder until market_data_service is implemented
+    from src.services import market_data_fake_store as fake_store
+
+    symbols = _resolve_symbols_from_holdings(portfolio_ids)
+    collected_at = datetime.now(timezone.utc).isoformat()
+
+    if fake_store.has_data():
+        data: dict[str, Any] = {}
+        for sym in symbols:
+            series = fake_store.get_series(sym)
+            if series:
+                data[sym] = series
+        return {
+            "scenario_id": scenario_id,
+            "portfolio_ids": portfolio_ids,
+            "symbols": list(symbols),
+            "data": data,
+            "collected_at": collected_at,
+        }
+
+    # Stub when no fake data or real provider
     return {
         "scenario_id": scenario_id,
         "portfolio_ids": portfolio_ids,
         "symbols": [],
         "data": {},
-        "collected_at": datetime.now(timezone.utc).isoformat(),
+        "collected_at": collected_at,
     }
 
 
