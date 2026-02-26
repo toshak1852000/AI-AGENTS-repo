@@ -47,8 +47,8 @@ class HoldingCreate(HoldingBase):
 
 class HoldingUpdate(BaseModel):
     """Schema for updating a holding."""
-    quantity: Optional[float] = None
-    average_price: Optional[float] = None
+    quantity: Optional[float] = Field(None, gt=0, description="Number of shares")
+    average_price: Optional[float] = Field(None, gt=0, description="Average purchase price")
     current_price: Optional[float] = None
 
 
@@ -71,6 +71,21 @@ class PortfolioListResponse(BaseModel):
     portfolios: List[Portfolio] = Field(default_factory=list, description="Portfolios in this page")
 
 
+class HoldingListResponse(BaseModel):
+    """Paginated list of holdings for a portfolio."""
+    total: int = Field(..., description="Total number of holdings")
+    skip: int = Field(..., description="Number of items skipped")
+    limit: int = Field(..., description="Page size")
+    holdings: List[Holding] = Field(default_factory=list, description="Holdings in this page")
+
+
 class PortfolioWithHoldings(Portfolio):
     """Portfolio schema with holdings."""
     holdings: List[Holding] = []
+
+
+class PortfolioVersionInfo(BaseModel):
+    """Version metadata for portfolio version history."""
+    id: str = Field(..., description="Version snapshot ID")
+    created_at: datetime = Field(..., description="When the version was created")
+    portfolio_name: str = Field(..., description="Portfolio name at this version")
