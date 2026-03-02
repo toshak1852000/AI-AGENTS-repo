@@ -15,6 +15,13 @@ class ScenarioType(str, Enum):
     COMPANY_SPECIFIC = "company_specific"
 
 
+class ScenarioStatus(str, Enum):
+    """Lifecycle status of a scenario definition."""
+    DRAFT = "draft"
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
 class MarketDataProvider(str, Enum):
     """Available market data providers."""
     ALPHA_VANTAGE = "alpha_vantage"
@@ -113,6 +120,42 @@ DEFAULT_SCENARIO_PARAMETERS: Dict[str, Dict] = {
         "implementation_delay_days": 90,
     },
 }
+
+# Pre-defined scenario templates (name, description, type, default parameters)
+SCENARIO_TEMPLATES: List[Dict] = [
+    {
+        "id": "tpl_market_crash",
+        "name": "Severe Market Crash",
+        "description": "Simulates a severe broad market decline.",
+        "type": ScenarioType.MARKET_SHOCK,
+        "parameters": {
+            "market_decline_percentage": 20.0,
+            "duration_days": 30,
+            "volatility_increase": 2.0,
+        },
+    },
+    {
+        "id": "tpl_energy_crisis",
+        "name": "Energy Crisis",
+        "description": "Simulates a massive spike in crude oil prices.",
+        "type": ScenarioType.COMMODITY_FLUCTUATION,
+        "parameters": {
+            "commodity_type": "crude_oil",
+            "price_change_percentage": 50.0,
+            "duration_days": 90,
+        },
+    },
+    {
+        "id": "tpl_rate_hike",
+        "name": "Fed Rate Hike",
+        "description": "Simulates a significant increase in interest rates.",
+        "type": ScenarioType.INTEREST_RATE_CHANGE,
+        "parameters": {
+            "rate_increase_bps": 100,
+            "duration_days": 180,
+        },
+    },
+]
 
 # Risk score thresholds
 RISK_SCORE_THRESHOLDS: Dict[RiskLevel, float] = {
