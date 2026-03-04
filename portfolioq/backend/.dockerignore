@@ -1,0 +1,26 @@
+# Git and IDE
+.git
+.gitignore
+.venv
+venv
+env
+*.pyc
+__pycache__
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+*.egg-info
+.eggs
+
+# Tests (optional: include if you want to run tests in image)
+# tests
+
+# Local env and secrets
+.env
+.env.local
+*.log
+
+# Documentation (optional)
+*.md
+!README.md

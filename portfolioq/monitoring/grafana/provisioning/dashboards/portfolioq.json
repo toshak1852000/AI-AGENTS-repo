@@ -1,0 +1,315 @@
+{
+  "title": "PortfolioQ — Enterprise Risk & Analytics",
+  "uid": "portfolioq-main",
+  "version": 1,
+  "schemaVersion": 38,
+  "timezone": "browser",
+  "refresh": "1m",
+  "tags": ["portfolioq", "risk", "portfolio", "analytics"],
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total Portfolios",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": "PostgreSQL",
+      "options": { "colorMode": "background", "graphMode": "none", "textMode": "value" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{ "color": "blue", "value": null }] },
+          "unit": "short"
+        }
+      },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS value FROM portfolios;", "refId": "A", "format": "table" }]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total Holdings",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "datasource": "PostgreSQL",
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{ "color": "green", "value": null }] }
+        }
+      },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS value FROM holdings;", "refId": "A", "format": "table" }]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Unread Alerts",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": "PostgreSQL",
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        }
+      },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS value FROM alerts WHERE read = false;", "refId": "A", "format": "table" }]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Critical Alerts",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "datasource": "PostgreSQL",
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS value FROM alerts WHERE severity = 'critical' AND read = false;", "refId": "A", "format": "table" }]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Scenario Runs (24h)",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "datasource": "PostgreSQL",
+      "options": { "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{ "color": "purple", "value": null }] }
+        }
+      },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS value FROM scenario_runs WHERE created_at > NOW() - INTERVAL '24 hours';", "refId": "A", "format": "table" }]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Reports Generated",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": "PostgreSQL",
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "steps": [{ "color": "teal", "value": null }] }
+        }
+      },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS value FROM reports;", "refId": "A", "format": "table" }]
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Portfolio Risk Scores — Latest per Portfolio",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "risk_level" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "low": { "color": "green", "index": 0 }, "medium": { "color": "yellow", "index": 1 }, "high": { "color": "orange", "index": 2 }, "critical": { "color": "red", "index": 3 } } }
+              ]}
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "score" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "lcd-gauge" },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 1 },
+              { "id": "color", "value": { "mode": "continuous-RdYlGr" } }
+            ]
+          }
+        ]
+      },
+      "options": { "sortBy": [{ "displayName": "score", "desc": true }] },
+      "targets": [{
+        "rawSql": "SELECT p.name AS portfolio, rs.risk_level, ROUND(rs.score::numeric, 3) AS score, ROUND(rs.pl_impact::numeric, 0) AS pl_impact_usd, rs.created_at AS assessed_at FROM risk_scores rs JOIN portfolios p ON rs.portfolio_id = p.id WHERE rs.created_at = (SELECT MAX(r2.created_at) FROM risk_scores r2 WHERE r2.portfolio_id = rs.portfolio_id) ORDER BY rs.score DESC;",
+        "refId": "A",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 11,
+      "type": "piechart",
+      "title": "Alert Severity Distribution",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 4 },
+      "datasource": "PostgreSQL",
+      "options": { "legendDisplayMode": "table", "placement": "right" },
+      "targets": [{
+        "rawSql": "SELECT severity AS metric, COUNT(*) AS value FROM alerts GROUP BY severity ORDER BY value DESC;",
+        "refId": "A",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 12,
+      "type": "piechart",
+      "title": "Scenario Runs by Status",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 4 },
+      "datasource": "PostgreSQL",
+      "options": { "legendDisplayMode": "table", "placement": "right" },
+      "targets": [{
+        "rawSql": "SELECT status AS metric, COUNT(*) AS value FROM scenario_runs GROUP BY status;",
+        "refId": "A",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "API Request Rate (req/s)",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 12 },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(portfolioq_api_requests_total[1m])) by (endpoint)",
+        "legendFormat": "{{endpoint}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "API Response Time p95 (seconds)",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 12 },
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "s"
+        }
+      },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(portfolioq_api_request_duration_seconds_bucket[5m])) by (le, endpoint))",
+        "legendFormat": "p95 {{endpoint}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 30,
+      "type": "table",
+      "title": "Latest Alerts — Risk & Exposure Signals",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 19 },
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "severity" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "info": { "color": "blue", "index": 0 }, "warning": { "color": "orange", "index": 1 }, "critical": { "color": "red", "index": 2 } } }
+              ]}
+            ]
+          }
+        ]
+      },
+      "options": { "sortBy": [{ "displayName": "created_at", "desc": true }] },
+      "targets": [{
+        "rawSql": "SELECT a.severity, a.title, a.message, p.name AS portfolio, a.read, a.created_at FROM alerts a LEFT JOIN portfolios p ON a.portfolio_id = p.id ORDER BY a.created_at DESC LIMIT 20;",
+        "refId": "A",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 40,
+      "type": "table",
+      "title": "Sector Exposure Summary — Latest Scenario Runs",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+      "datasource": "PostgreSQL",
+      "options": { "sortBy": [{ "displayName": "exposure_pct", "desc": true }] },
+      "targets": [{
+        "rawSql": "SELECT p.name AS portfolio, ROUND(e.risk_score::numeric, 3) AS risk_score, ROUND(e.total_exposure::numeric, 0) AS total_exposure, e.created_at FROM exposures e JOIN portfolios p ON e.portfolio_id = p.id ORDER BY e.created_at DESC LIMIT 15;",
+        "refId": "A",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Scenario Runs Over Time",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
+      "datasource": "PostgreSQL",
+      "targets": [{
+        "rawSql": "SELECT date_trunc('hour', created_at) AS time, COUNT(*) AS value FROM scenario_runs WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY 1 ORDER BY 1;",
+        "refId": "A",
+        "format": "time_series"
+      }]
+    },
+    {
+      "id": 50,
+      "type": "timeseries",
+      "title": "ML Model Predictions Per Minute",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 35 },
+      "datasource": "Prometheus",
+      "targets": [{
+        "expr": "sum(rate(portfolioq_ml_predictions_total[1m])) by (model_name)",
+        "legendFormat": "{{model_name}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "ML Inference Latency p95 (s)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 35 },
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(portfolioq_ml_inference_duration_seconds_bucket[5m])) by (le, model_name))",
+        "legendFormat": "p95 {{model_name}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 60,
+      "type": "table",
+      "title": "Top Holdings at Risk (Latest Risk Scores)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 41 },
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "risk_level" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "low": { "color": "green" }, "medium": { "color": "yellow" }, "high": { "color": "orange" }, "critical": { "color": "red" } } }
+              ]}
+            ]
+          }
+        ]
+      },
+      "targets": [{
+        "rawSql": "SELECT p.name AS portfolio, h.symbol, h.company_name, h.sector, ROUND((h.quantity * COALESCE(h.current_price, h.average_price))::numeric, 0) AS market_value_usd, ROUND(h.current_price::numeric, 2) AS current_price, h.sector FROM holdings h JOIN portfolios p ON h.portfolio_id = p.id ORDER BY market_value_usd DESC NULLS LAST LIMIT 20;",
+        "refId": "A",
+        "format": "table"
+      }]
+    }
+  ]
+}

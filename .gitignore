@@ -1,0 +1,19 @@
+# Prevent secrets and heavy/cache artifacts (DevOps-safe push)
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+logs/
+.DS_Store
+.idea/
+.vscode/
+*.sqlite
+*.db
+mlruns/
+.mlruns/
