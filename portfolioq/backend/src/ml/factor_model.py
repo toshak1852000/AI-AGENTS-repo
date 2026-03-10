@@ -13,14 +13,19 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import Ridge
-from sklearn.model_selection import cross_val_score, TimeSeriesSplit
-from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler  # type: ignore[reportMissingImports]
 from sklearn.metrics import r2_score, mean_squared_error
 import mlflow
 import mlflow.sklearn
 
 from src.ml.mlflow_tracker import (
-    MLFLOW_EXPERIMENT_FACTOR, MLFLOW_TRACKING_URI, log_system_metrics, run_context
+    MLFLOW_EXPERIMENT_FACTOR,
+    MLFLOW_TRACKING_URI,
+    log_run_summary,
+    log_system_metrics,
+    run_context,
+    transition_registered_model_to_production,
 )
 
 logger = logging.getLogger(__name__)
@@ -247,8 +252,75 @@ def train_factor_model(alpha: float = 0.1) -> FactorModel:
             for k, v in metrics.items():
                 mlflow.log_metric(k, v)
             log_system_metrics()
-            mlflow.sklearn.log_model(factor_model.scaler, artifact_path="factor_scaler",
-                                     registered_model_name="portfolioq_factor_scaler")
+            log_run_summary(
+                {
+                    "training_duration_seconds": round(duration, 3),
+                    "avg_r2": float(avg_r2),
+                    "avg_rmse": float(avg_rmse),
+                    "n_models_trained": len(factor_model.models),
+                },
+                "factor_model",
+            )
+
+            # R2 per symbol bar chart and CSV for MLflow visualizations
+            r2_items = [(k.replace("r2_", ""), v) for k, v in metrics.items() if k.startswith("r2_")]
+            r2_items.sort(key=lambda x: -x[1])
+            top_n = min(15, len(r2_items))
+            if r2_items:
+                try:
+                    import matplotlib
+                    matplotlib.use("Agg")
+                    import matplotlib.pyplot as plt
+                    symbols = [x[0] for x in r2_items[:top_n]]
+                    r2_vals = [x[1] for x in r2_items[:top_n]]
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    ax.barh(range(len(symbols)), r2_vals, color="steelblue")
+                    ax.set_yticks(range(len(symbols)))
+                    ax.set_yticklabels(symbols, fontsize=9)
+                    ax.set_xlabel("R²")
+                    ax.set_title("Factor model R² per symbol (top %d)" % top_n)
+                    fig.tight_layout()
+                    fig.savefig("/tmp/factor_r2_per_symbol.png", dpi=100, bbox_inches="tight")
+                    plt.close(fig)
+                    mlflow.log_artifact("/tmp/factor_r2_per_symbol.png", artifact_path="plots")
+                except Exception as e:
+                    logger.warning("Could not log factor R2 plot: %s", e)
+                # CSV: symbol,r2,rmse
+                import csv
+                with open("/tmp/factor_metrics_per_symbol.csv", "w", newline="") as f:
+                    w = csv.writer(f)
+                    w.writerow(["symbol", "r2", "rmse"])
+                    for sym, r2 in r2_items:
+                        rmse = metrics.get("rmse_%s" % sym, 0)
+                        w.writerow([sym, round(r2, 6), round(rmse, 6)])
+                mlflow.log_artifact("/tmp/factor_metrics_per_symbol.csv", artifact_path="plots")
+
+            # Signature and input_example for scaler (factor returns -> scaled)
+            if not factor_rets.empty and all(c in factor_rets.columns for c in FACTOR_NAMES):
+                input_example = factor_rets[FACTOR_NAMES].head(5)
+            else:
+                input_example = pd.DataFrame(np.zeros((2, len(FACTOR_NAMES))), columns=FACTOR_NAMES)
+            try:
+                output = factor_model.scaler.transform(input_example)
+                signature = mlflow.models.infer_signature(input_example, output)
+                mlflow.sklearn.log_model(
+                    factor_model.scaler,
+                    artifact_path="factor_scaler",
+                    registered_model_name="portfolioq_factor_scaler",
+                    signature=signature,
+                    input_example=input_example,
+                )
+            except Exception as e:
+                logger.warning("Log model with signature failed, logging without: %s", e)
+                mlflow.sklearn.log_model(
+                    factor_model.scaler,
+                    artifact_path="factor_scaler",
+                    registered_model_name="portfolioq_factor_scaler",
+                )
+            transition_registered_model_to_production(
+                "portfolioq_factor_scaler",
+                description="StandardScaler for factor returns (market, size, value, momentum, oil, gold, bonds, usd).",
+            )
             logger.info("Factor model training done: avg_r2=%.4f n_models=%d duration=%.2fs", avg_r2, len(factor_model.models), duration)
 
     factor_model.save()

@@ -21,6 +21,16 @@ Enterprise-grade autonomous workflow designed to evaluate the impact of market e
 - **Database**: PostgreSQL
 - **Cache/Task Queue**: Redis + Celery
 - **Workflow Engine**: LangGraph
+- **ML/Scenario**: Factor model (Ridge), Risk (XGBoost), Opportunity (Isolation Forest); Scenario engine; MLflow
+
+For full **system architecture** (Data, Feature Engineering, ML, Scenario Engine, Risk Engine, Insight Generation, Monitoring, APIs), see [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md). Data pipelines, model methodology, scenario engine design, and risk scoring are documented in `docs/DATA_PIPELINES.md`, `docs/MODEL_METHODOLOGY.md`, `docs/SCENARIO_ENGINE_DESIGN.md`, and `docs/RISK_SCORING_METHODOLOGY.md`.
+
+## CI (GitHub Actions)
+
+- **Backend:** pytest (blocking), ruff lint (blocking).
+- **Frontend:** Jest tests (blocking), `next lint` (blocking).
+- **Optional:** Docker image build for backend (non-blocking).
+- Merge is blocked until all required jobs pass. See `.github/workflows/ci.yml`.
 
 ## Quick Start
 
@@ -30,11 +40,18 @@ Enterprise-grade autonomous workflow designed to evaluate the impact of market e
 - Python 3.11+
 - Node.js 18+
 
+### Docker and environment
+
+1. Copy `docker-compose.example.yml` to `docker-compose.yml` and `.env.example` to `.env`.
+2. Edit `.env`: set `POSTGRES_PASSWORD`, `SECRET_KEY`, and optionally API keys (Alpha Vantage, FRED, OpenAI). See SETUP.md for full list.
+3. Run `docker compose up -d` from the project root (postgres, redis, mlflow, backend, celery worker/beat, prometheus, grafana).
+
 ### Setup
 
 1. **Clone the repository**
    ```bash
-   cd /home/himanshu/projects/portfolioq
+   git clone <repo-url>
+   cd portfolioq
    ```
 
 2. **Copy configuration files**
@@ -45,14 +62,13 @@ Enterprise-grade autonomous workflow designed to evaluate the impact of market e
 
 3. **Configure environment variables**
    Edit `.env` and fill in:
-   - Database credentials
-   - Redis configuration
-   - API keys for market data providers (Alpha Vantage, Yahoo Finance, FRED)
-   - Secret keys
+   - Database credentials (`POSTGRES_PASSWORD`)
+   - `SECRET_KEY` (e.g. `openssl rand -hex 32`)
+   - API keys for market data (Alpha Vantage, FRED; optional: Yahoo, OpenAI)
 
 4. **Start services with Docker Compose**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 5. **Set up backend (if running locally)**

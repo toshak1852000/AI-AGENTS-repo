@@ -1,11 +1,13 @@
 """Portfolio CRUD endpoints."""
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from src.core.database import get_db
 from src.models.portfolio import Portfolio, Holding
+from src.models.scenario import ScenarioRun
+from src.models.exposure import Exposure, RiskScore
 from src.schemas.portfolio import (
     PortfolioCreate, PortfolioUpdate, Portfolio as PortfolioSchema,
     PortfolioWithHoldings, HoldingCreate, Holding as HoldingSchema,
@@ -112,6 +114,67 @@ def delete_holding(portfolio_id: str, holding_id: str, db: Session = Depends(get
     db.delete(h)
     db.commit()
     HOLDINGS_COUNT.set(db.query(Holding).count())
+
+
+@router.get("/{portfolio_id}/rebalancing-recommendations")
+def get_rebalancing_recommendations(
+    portfolio_id: str,
+    scenario_id: Optional[str] = Query(None, description="Optional scenario ID; uses latest run for exposure/risk"),
+    db: Session = Depends(get_db),
+):
+    """Scenario-based rebalancing recommendations for a portfolio. Uses latest run if scenario_id given, else latest exposure/risk."""
+    from src.services.rebalancing_service import generate_rebalancing_recommendations
+
+    port = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+    if not port:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    portfolio = {"id": port.id, "name": port.name}
+
+    exposure_result = {}
+    risk_result = {"risk_level": "low", "risk_score": 0.5, "prioritized_holdings": []}
+
+    if scenario_id:
+        runs = (
+            db.query(ScenarioRun)
+            .filter(ScenarioRun.scenario_id == scenario_id, ScenarioRun.status == "completed")
+            .order_by(ScenarioRun.completed_at.desc().nullslast(), ScenarioRun.created_at.desc())
+            .all()
+        )
+        run = None
+        for r in runs:
+            if r.portfolio_ids and portfolio_id in r.portfolio_ids and r.exposure_result and r.risk_result:
+                run = r
+                break
+        if run:
+            exposure_result = run.exposure_result or {}
+            risk_result = run.risk_result or risk_result
+    if not exposure_result:
+        exp = (
+            db.query(Exposure)
+            .filter(Exposure.portfolio_id == portfolio_id)
+            .order_by(Exposure.created_at.desc())
+            .first()
+        )
+        if exp:
+            exposure_result = {
+                "total_exposure": float(exp.total_exposure or 0),
+                "sector_exposures": exp.sector_exposures or [],
+                "company_exposures": exp.company_exposures or [],
+            }
+        rs = (
+            db.query(RiskScore)
+            .filter(RiskScore.portfolio_id == portfolio_id)
+            .order_by(RiskScore.created_at.desc())
+            .first()
+        )
+        if rs:
+            risk_result["risk_level"] = rs.risk_level or "low"
+            risk_result["risk_score"] = float(rs.score or 0.5)
+            risk_result["pl_impact"] = float(rs.pl_impact or 0)
+            risk_result["prioritized_holdings"] = risk_result.get("prioritized_holdings") or []
+
+    recs = generate_rebalancing_recommendations(portfolio, exposure_result, risk_result)
+    return recs
 
 
 @router.post("/{portfolio_id}/refresh-prices", response_model=dict)

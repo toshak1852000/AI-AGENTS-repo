@@ -39,9 +39,14 @@ def report_generation_node(state: ScenarioAnalysisStateTypedDict) -> ScenarioAna
         rebal = generate_rebalancing_recommendations(portfolio, exposure_result, risk_result)
         risk_result["rebalancing_recommendations"] = rebal
 
+        # Report format: from scenario parameters or default json (board-ready PDF/Excel when requested)
+        report_format = (scenario.get("parameters") or {}).get("report_format", "json")
+        if report_format not in ("json", "pdf", "excel"):
+            report_format = "json"
+
         # Generate report
         report_summary = generate_report(
-            db, scenario, portfolio, exposure_result, risk_result, run_id, report_format="json"
+            db, scenario, portfolio, exposure_result, risk_result, run_id, report_format=report_format
         )
         report_id = report_summary.get("report_id")
 
@@ -61,7 +66,7 @@ def report_generation_node(state: ScenarioAnalysisStateTypedDict) -> ScenarioAna
         )
         for alert in alerts:
             ALERTS_CREATED.labels(severity=alert.severity).inc()
-        REPORTS_GENERATED.labels(format="json").inc()
+        REPORTS_GENERATED.labels(format=report_format).inc()
 
         return {
             "status": "completed",

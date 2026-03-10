@@ -1,0 +1,108 @@
+# PortfolioQ — Production-grade platform configuration
+# Aligns with backend .env and constants; used by pipelines and services
+
+project:
+  name: portfolioq
+  environment: development  # development | staging | production
+  version: "1.0.0"
+
+data:
+  raw_market_data_dir: "data/raw_market_data"
+  processed_data_dir: "data/processed_data"
+  artifacts_dir: "artifacts"
+  # Retention (days) for raw/processed cache
+  raw_retention_days: 90
+  processed_retention_days: 30
+
+ingestion:
+  providers:
+    - yahoo_finance
+    - fred
+    - alpha_vantage
+  default_period: "2y"
+  rate_limit_delay_seconds: 0.5
+  max_retries: 3
+
+data_validation:
+  schema_strict: false
+  missing_value_strategy: "drop"  # drop | fill_zero | interpolate
+  outlier_method: "iqr"  # iqr | zscore | winsorize
+  outlier_z_threshold: 3.0
+  drift_detection_window: 30
+  drift_psi_threshold: 0.25
+
+feature_engineering:
+  volatility_window: 20
+  rolling_windows: [5, 10, 20, 60]
+  factor_names: ["market", "small_cap", "value", "momentum", "oil", "gold", "bonds", "usd"]
+  correlation_min_periods: 20
+
+scenario_engine:
+  scenario_types:
+    - market_shock
+    - commodity_fluctuation
+    - regulatory_change
+    - geopolitical_event
+    - interest_rate_change
+    - currency_fluctuation
+    - sector_decline
+    - company_specific
+  default_shock_scale: 1.0
+  max_holdings_per_run: 500
+
+risk_scoring:
+  risk_levels: ["low", "medium", "high", "critical"]
+  threshold_medium: 0.3
+  threshold_high: 0.6
+  threshold_critical: 0.8
+  confidence_interval_level: 0.95
+  combine_ml_and_rules: true
+
+ml_models:
+  factor:
+    algorithm: "ridge"
+    alpha_default: 0.1
+  risk:
+    algorithms: ["xgboost", "random_forest", "lightgbm"]
+    default_algorithm: "xgboost"
+    cv_folds: 5
+    tuning_trials: 30
+  opportunity:
+    algorithm: "isolation_forest"
+    contamination: 0.08
+    n_estimators: 200
+
+evaluation:
+  forecasting_metrics: ["rmse", "mae", "mape"]
+  classification_metrics: ["accuracy", "f1_weighted", "roc_auc_ovr"]
+  risk_metrics: ["var_error", "expected_shortfall_error"]
+  overfitting_ratio_threshold: 1.5  # train vs val
+  min_stability_ratio: 0.8  # prediction stability
+
+monitoring:
+  data_drift_enabled: true
+  model_drift_enabled: true
+  prediction_anomaly_enabled: true
+  risk_threshold_breach_enabled: true
+  risk_breach_critical: 0.8
+  risk_breach_high: 0.6
+  alert_cooldown_minutes: 60
+
+alerts:
+  channels: ["database", "dashboard"]  # email when smtp configured
+  severity_levels: ["info", "warning", "critical"]
+  extreme_market_change_pct: 5.0
+  portfolio_risk_spike_delta: 0.2
+  scenario_impact_threshold_pct: 10.0
+
+mlflow:
+  tracking_uri_env: "MLFLOW_TRACKING_URI"
+  experiments:
+    factor: "portfolioq_factor_model"
+    risk: "portfolioq_risk_scoring"
+    opportunity: "portfolioq_opportunity_detection"
+
+api:
+  base_path: "/api/v1"
+  batch_prediction_max_size: 100
+  scenario_simulation_timeout_seconds: 300

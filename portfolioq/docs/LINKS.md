@@ -20,9 +20,9 @@ Use these after running the project (e.g. `bash scripts/run-project-e2e.sh`).
 
 | What         | URL |
 |-------------|-----|
-| MLflow UI   | http://localhost:5001 |
-| Experiments | http://localhost:5001/#/experiments |
-| Models      | http://localhost:5001/#/models |
+| MLflow UI   | http://localhost:5003 |
+| Experiments | http://localhost:5003/#/experiments |
+| Models      | http://localhost:5003/#/models |
 
 ---
 

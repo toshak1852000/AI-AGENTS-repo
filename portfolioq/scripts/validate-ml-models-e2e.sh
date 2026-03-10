@@ -102,7 +102,7 @@ if [ -z "$PID" ] || [ -z "$SCID" ]; then
   REPORT_ID=""
 else
   echo "--- 2.1 POST /scenarios/{id}/run ---"
-  RUN=$(curl -sf -X POST "$API_SC/$SCID/run" -H "Content-Type: application/json" \
+  RUN=$(curl -sf --max-time 120 -X POST "$API_SC/$SCID/run" -H "Content-Type: application/json" \
     -d "{\"portfolio_ids\":[\"$PID\"]}" 2>/dev/null)
   RUN_STATUS=$(echo "$RUN" | python3 -c "
 import sys,json

@@ -66,6 +66,40 @@ def score_portfolio(body: ScoreRequest):
     return get_risk_model().predict_risk({f: 0.5 for f in FEATURES})
 
 
+class BatchScoreRequest(BaseModel):
+    """Batch risk score: list of feature dicts (same keys as FEATURES)."""
+    features_list: list[dict[str, float]]
+    max_size: int = 100
+
+
+@router.post("/score/batch")
+def score_portfolio_batch(body: BatchScoreRequest):
+    """Batch prediction for risk scores (production endpoint)."""
+    from src.ml.risk_model import get_risk_model, FEATURES
+    model = get_risk_model()
+    size = min(len(body.features_list), body.max_size)
+    results = []
+    for i in range(size):
+        feats = body.features_list[i]
+        vec = {f: feats.get(f, 0.5) for f in FEATURES}
+        results.append(model.predict_risk(vec))
+    return {"predictions": results, "count": len(results)}
+
+
+class ScenarioSimulationRequest(BaseModel):
+    """Scenario simulation request (holdings + scenario type)."""
+    holdings: list[dict]
+    scenario_type: str = "market_shock"
+    scale: float = 1.0
+
+
+@router.post("/scenario-simulation")
+def run_scenario_simulation_endpoint(body: ScenarioSimulationRequest):
+    """Run scenario simulation engine: P&L impact, exposure, sector vulnerability."""
+    from src.scenario_engine import run_scenario_simulation
+    return run_scenario_simulation(body.holdings, body.scenario_type, scale=body.scale)
+
+
 class FactorBetasRequest(BaseModel):
     symbols: list[str]
     scenario_type: str = "market_shock"
@@ -86,4 +120,4 @@ def get_factor_betas(body: FactorBetasRequest):
 def get_mlflow_url():
     """Return the MLflow tracking UI URL."""
     import os
-    return {"mlflow_url": os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5001")}
+    return {"mlflow_url": os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5003")}

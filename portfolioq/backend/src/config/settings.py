@@ -1,5 +1,5 @@
 """Application settings loaded from environment variables."""
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict  # type: ignore[import-untyped]
 from typing import List
 
 
@@ -63,12 +63,18 @@ class Settings(BaseSettings):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Build database URL if not provided
+        # Build database URL if not provided (PostgreSQL only; project uses PostgreSQL end-to-end)
         if not self.database_url:
             self.database_url = (
                 f"postgresql://{self.postgres_user}:{self.postgres_password}"
                 f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
             )
+        else:
+            url = (self.database_url or "").strip()
+            if url and not url.lower().startswith("postgresql"):
+                raise ValueError(
+                    "database_url must point to PostgreSQL; this project uses PostgreSQL end-to-end."
+                )
         # Build Redis URL if not provided
         if not self.redis_url:
             self.redis_url = f"redis://{self.redis_host}:{self.redis_port}/0"

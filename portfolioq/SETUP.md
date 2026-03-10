@@ -2,6 +2,10 @@
 
 This document provides step-by-step instructions for setting up the PortfolioQ project.
 
+## CI (GitHub Actions)
+
+CI runs on push/PR to `main` or `master`: backend pytest and ruff lint, frontend Jest tests and `next lint`. Optional: Docker image build. **Merge is blocked until tests and lint pass** (configure branch protection in GitHub to require status checks).
+
 ## Initial Setup
 
 ### 1. Copy Configuration Files
@@ -39,9 +43,12 @@ docker-compose up -d
 This will start:
 - PostgreSQL (port 5432)
 - Redis (port 6379)
+- MLflow (port 5003)
 - Backend API (port 8000)
-- Celery Worker
-- Celery Beat
+- Celery Worker and Celery Beat
+- Prometheus (port 9090) and Grafana (port 3001)
+
+All required environment variables are documented in `.env.example`. For Docker, ensure `POSTGRES_PASSWORD` and `SECRET_KEY` are set; optional: `ALPHA_VANTAGE_API_KEY`, `FRED_API_KEY`, `OPENAI_API_KEY`, `GRAFANA_USER`, `GRAFANA_PASSWORD`.
 
 ### 4. Set Up Backend (Local Development)
 

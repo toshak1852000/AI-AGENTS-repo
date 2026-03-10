@@ -1,10 +1,43 @@
 # PortfolioQ — Resume Gap Analysis & ML Recommendation
 
+**Note:** This document is a historical gap analysis. For today's status, see **"Current implementation status"** below.
+
 This document maps the **resume/capability claims** to the **current codebase**, lists what is **remaining to implement**, and recommends **ML models** for the use case.
 
 ---
 
-## 1. Resume Points vs Implementation Status
+## Current implementation status (as of March 2025)
+
+All resume points below are **Implemented** and validated via `scripts/validate-all-apis.sh` and `scripts/run-all.sh`.
+
+| Resume claim | Status | Where in codebase |
+|--------------|--------|--------------------|
+| Evaluate portfolio exposure to market, commodity, regulatory changes | **Implemented** | `exposure_service.calculate_exposure`, factor model scenario shocks; `exposure_calculation_node` |
+| Identify how scenarios affect individual holdings and sectors | **Implemented** | `exposure_service` → company_exposures, sector_exposures; report summary; GET `/exposure/portfolio/{id}` |
+| Detect emerging risks and potential strategic opportunities | **Implemented** | `risk_service.assess_risk`, `risk_model`, `opportunity_model`; prioritized_holdings with signals; `risk_assessment_node` |
+| Generate automated, actionable insights for governance and oversight | **Implemented** | `report_service.generate_report` (PDF/Excel/JSON), executive summary, recommendations; `report_generation_node` |
+| Track scenario triggers and provide real-time notifications | **Implemented** | `alert_service.evaluate_and_create_alerts`, Alert model; Celery `check_alert_thresholds`; GET/PUT alerts API |
+| Automated portfolio sensitivity modeling | **Implemented** | `factor_model.portfolio_sensitivity`, factor betas; exposure_result.sensitivity_score; exposure API |
+| Market factor and regulatory impact assessment | **Implemented** | Factor model + scenario types in `constants.py`; `risk_service` features; scenario shocks in factor_model |
+| Quantitative and qualitative data integration | **Implemented** | `integrations/` (yahoo_finance, fred, alpha_vantage); `llm_service.generate_scenario_narrative` (qualitative) |
+| Scenario-driven risk scoring and prioritization | **Implemented** | `risk_model` (XGBoost), risk_service; prioritized_holdings; RiskScore model; GET risk-scores API |
+| Scalable, repeatable, audit-ready analytics pipelines | **Implemented** | LangGraph workflow; PostgreSQL persistence (ScenarioRun, Exposure, Report, Alert); `run_workflow` |
+| Conducted automated scenario analysis | **Implemented** | POST `/scenarios/{id}/run` runs full workflow; ScenarioRun persisted |
+| Mapped company- and sector-level impacts | **Implemented** | company_exposures, sector_exposures in exposure_result and report; exposure API |
+| Generated board-ready scenario reports | **Implemented** | report_service (_write_pdf, _write_excel, _write_json); GET report download; POST reports/generate |
+| Continuous monitoring workflows for real-time alerts | **Implemented** | Celery Beat: refresh_all_prices (hourly), run_all_scheduled_scenarios (daily), check_alert_thresholds (30 min), retrain (weekly) |
+| Integrated quantitative and qualitative insights | **Implemented** | Market data services + LLM narrative in reports |
+| Portfolio Sensitivity Scores by market factor or scenario | **Implemented** | exposure_result.sensitivity_score, portfolio_factor_betas; GET exposure returns sensitivity_scores |
+| Company-Level Exposure Analysis | **Implemented** | exposure_service company_exposures; GET exposure/portfolio, POST exposure/calculate |
+| Stress-Tested P&L Impact | **Implemented** | factor_model portfolio_pl_impact; risk_result.pl_impact, pl_impact_pct; report risk_assessment |
+| Risk & Opportunity Signal Frequency | **Implemented** | Alerts; opportunity model signals (strong_buy, buy, hold, reduce, sell) in prioritized_holdings |
+| Scenario-Based Rebalancing Recommendations | **Implemented** | `rebalancing_service.generate_rebalancing_recommendations`; in report summary; GET `/portfolios/{id}/rebalancing-recommendations` |
+
+**Section 5 checklist (all done):** DB enabled and used; market data integrations and market_data_service; exposure_service and node; risk_service and node; report_service (PDF/Excel/JSON) and download; alert creation and listing; Celery periodic tasks; sensitivity/rebalancing logic; ML (factor, risk, opportunity, LLM).
+
+---
+
+## 1. Resume Points vs Implementation Status (historical)
 
 | Resume claim | Status | Where in codebase |
 |--------------|--------|--------------------|
@@ -156,16 +189,16 @@ Context: **portfolio scenario analysis**, **exposure and risk scoring**, **marke
 
 ---
 
-## 5. Next Steps (Checklist)
+## 5. Next Steps (Checklist) — all complete
 
-- [ ] Enable and migrate DB (uncomment models, Alembic).  
-- [ ] Implement market data integrations and market_data_service.  
-- [ ] Implement exposure_service and plug into exposure_calculation node.  
-- [ ] Implement risk_service (scores, P&L) and plug into risk_assessment node.  
-- [ ] Implement report_service (PDF/Excel/JSON) and report download.  
-- [ ] Implement alert creation and listing; optional notification delivery.  
-- [ ] Add Celery periodic tasks for continuous scenario monitoring.  
-- [ ] Add sensitivity/stress metrics and rebalancing recommendation logic.  
-- [ ] Introduce ML: factor model for sensitivity and P&L; XGBoost/LightGBM for risk scoring; optional NLP/LLM for qualitative and narrative.
+- [x] Enable and migrate DB (uncomment models, Alembic).  
+- [x] Implement market data integrations and market_data_service.  
+- [x] Implement exposure_service and plug into exposure_calculation node.  
+- [x] Implement risk_service (scores, P&L) and plug into risk_assessment node.  
+- [x] Implement report_service (PDF/Excel/JSON) and report download.  
+- [x] Implement alert creation and listing; optional notification delivery.  
+- [x] Add Celery periodic tasks for continuous scenario monitoring.  
+- [x] Add sensitivity/stress metrics and rebalancing recommendation logic.  
+- [x] Introduce ML: factor model for sensitivity and P&L; XGBoost/LightGBM for risk scoring; optional NLP/LLM for qualitative and narrative.
 
 This gives you a clear map from “what the resume says” to “what’s built” and “what to build next,” plus a concrete ML strategy for PortfolioQ.

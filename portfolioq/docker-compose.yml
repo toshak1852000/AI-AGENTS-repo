@@ -33,20 +33,20 @@ services:
     image: ghcr.io/mlflow/mlflow:v2.22.0
     container_name: portfolioq_mlflow
     ports:
-      - "5001:5001"
+      - "5003:5003"
     environment:
       - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+      # Use same PostgreSQL as application (single database end-to-end)
+      - MLFLOW_BACKEND_STORE_URI=postgresql://${POSTGRES_USER:-portfolioq}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-portfolioq}
     volumes:
       - mlflow_artifacts:/mlflow/artifacts
-      - mlflow_db:/mlflow/db
-    command: >
-      mlflow server
-        --backend-store-uri sqlite:////mlflow/db/mlflow.db
-        --default-artifact-root /mlflow/artifacts
-        --host 0.0.0.0
-        --port 5001
+    # Official image lacks psycopg2; install at startup then run server (ports unchanged)
+    command: ["bash", "-c", "pip install --quiet psycopg2-binary && exec python -m mlflow server --backend-store-uri \"$MLFLOW_BACKEND_STORE_URI\" --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5003"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5001/health')\" 2>/dev/null && echo ok"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5003/health')\" 2>/dev/null && echo ok"]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -110,7 +110,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG:-False}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - MLFLOW_TRACKING_URI=http://mlflow:5001
+      - MLFLOW_TRACKING_URI=http://mlflow:5003
       - MODEL_STORE=/app/ml_models
       - REPORTS_DIR=/app/reports
       - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-}
@@ -143,7 +143,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - MLFLOW_TRACKING_URI=http://mlflow:5001
+      - MLFLOW_TRACKING_URI=http://mlflow:5003
       - MODEL_STORE=/app/ml_models
       - REPORTS_DIR=/app/reports
       - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-}
@@ -176,7 +176,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - MLFLOW_TRACKING_URI=http://mlflow:5001
+      - MLFLOW_TRACKING_URI=http://mlflow:5003
       - MODEL_STORE=/app/ml_models
       - REPORTS_DIR=/app/reports
     volumes:
@@ -197,7 +197,6 @@ volumes:
   postgres_data:
   redis_data:
   mlflow_artifacts:
-  mlflow_db:
   prometheus_data:
   grafana_data:
   ml_models:

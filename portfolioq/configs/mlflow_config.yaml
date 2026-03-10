@@ -1,0 +1,28 @@
+# MLflow platform configuration (single PostgreSQL, port 5003)
+# Backend and artifact store are configured via docker-compose / env.
+
+server:
+  host: "0.0.0.0"
+  port: 5003
+  # backend_store_uri: set via env MLFLOW_BACKEND_STORE_URI (PostgreSQL, same DB as app)
+  # default_artifact_root: /mlflow/artifacts (in container)
+
+backend:
+  # Use same PostgreSQL database as application (no separate MLflow DB)
+  type: postgresql
+  # URI format: postgresql://USER:PASSWORD@postgres:5432/DATABASE
+
+artifacts:
+  root: "/mlflow/artifacts"
+
+model_registry:
+  enabled: true
+  stages:
+    - Staging
+    - Production
+    - Archived
+
+experiments:
+  factor: "portfolioq_factor_model"
+  risk: "portfolioq_risk_scoring"
+  opportunity: "portfolioq_opportunity_detection"

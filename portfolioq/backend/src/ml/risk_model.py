@@ -11,7 +11,7 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report, mean_squared_error, r2_score
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 import xgboost as xgb
@@ -19,7 +19,11 @@ import mlflow
 import mlflow.xgboost
 
 from src.ml.mlflow_tracker import (
-    MLFLOW_EXPERIMENT_RISK, log_system_metrics, run_context
+    MLFLOW_EXPERIMENT_RISK,
+    log_run_summary,
+    log_system_metrics,
+    run_context,
+    transition_registered_model_to_production,
 )
 
 logger = logging.getLogger(__name__)
@@ -89,10 +93,12 @@ class RiskScoringModel:
         if not self._is_fitted:
             return self._fallback_risk(features)
 
-        X = pd.DataFrame([features])[FEATURES]
+        # Build row with defaults for missing keys so partial feature dicts don't raise KeyError
+        row = {f: float(features.get(f, 0.0)) for f in FEATURES}
+        X = pd.DataFrame([row], columns=FEATURES)
         proba = self.clf.predict_proba(X)[0]
         class_idx = int(np.argmax(proba))
-        risk_level = self.le.classes_[class_idx]
+        risk_level = str(self.le.classes_[class_idx])
 
         # Continuous risk score: weighted sum of class indices / (n_classes-1)
         n = len(self.le.classes_)
@@ -207,13 +213,18 @@ def train_risk_model(**params) -> RiskScoringModel:
             for k, v in metrics.items():
                 mlflow.log_metric(k, v)
             log_system_metrics()
+            log_run_summary(
+                {"training_duration_seconds": round(duration, 3), **metrics},
+                "risk_model",
+            )
             # Feature importance
             fi = dict(zip(FEATURES, model.clf.feature_importances_))
             for f, imp in fi.items():
                 mlflow.log_metric(f"feature_importance_{f}", float(imp))
             # Classification report as artifact for readability in MLflow
-            y_pred = model.clf.predict(model.le.transform(y))
-            report = classification_report(y, model.le.inverse_transform(y_pred), zero_division=0)
+            y_pred = model.clf.predict(X)
+            y_pred_labels = model.le.inverse_transform(y_pred)
+            report = classification_report(y, y_pred_labels, zero_division=0)
             with open("/tmp/classification_report.txt", "w") as f:
                 f.write(report)
             mlflow.log_artifact("/tmp/classification_report.txt", artifact_path="evaluation")
@@ -235,12 +246,30 @@ def train_risk_model(**params) -> RiskScoringModel:
                 mlflow.log_artifact("/tmp/feature_importance.png", artifact_path="plots")
             except Exception as e:
                 logger.warning("Could not log feature importance plot: %s", e)
+            # Confusion matrix plot for at-a-glance performance in MLflow
+            try:
+                from sklearn.metrics import ConfusionMatrixDisplay
+                import matplotlib
+                matplotlib.use("Agg")
+                import matplotlib.pyplot as plt
+                fig, ax = plt.subplots(figsize=(8, 6))
+                ConfusionMatrixDisplay.from_predictions(y, y_pred_labels, ax=ax)
+                fig.tight_layout()
+                fig.savefig("/tmp/confusion_matrix.png", dpi=100, bbox_inches="tight")
+                plt.close(fig)
+                mlflow.log_artifact("/tmp/confusion_matrix.png", artifact_path="plots")
+            except Exception as e:
+                logger.warning("Could not log confusion matrix plot: %s", e)
             # Model with signature and input example for registry
             input_example = X.head(5)
             signature = mlflow.models.infer_signature(input_example, model.le.inverse_transform(model.clf.predict(input_example)))
             mlflow.xgboost.log_model(model.clf, artifact_path="risk_clf",
                                      registered_model_name="portfolioq_risk_model",
                                      signature=signature, input_example=input_example)
+            transition_registered_model_to_production(
+                "portfolioq_risk_model",
+                description="XGBoost risk classification (low/medium/high/critical) from exposure and scenario features.",
+            )
             logger.info("Risk model training done: cv_acc=%.4f duration=%.2fs", metrics["cv_mean_accuracy"], duration)
 
     model.save()

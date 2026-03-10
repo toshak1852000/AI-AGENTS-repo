@@ -37,8 +37,8 @@ echo "  Metrics:  http://localhost:${BACKEND_PORT:-8000}/metrics"
 echo ""
 
 echo "--- MLflow ---"
-echo "  URL:      http://localhost:5001"
-echo "  Experiments: http://localhost:5001/#/experiments"
+echo "  URL:      http://localhost:5003"
+echo "  Experiments: http://localhost:5003/#/experiments"
 echo ""
 
 echo "--- Prometheus ---"
@@ -65,7 +65,7 @@ echo ""
 echo "--- Quick status (optional) ---"
 if command -v curl &>/dev/null; then
   curl -sf "http://localhost:${BACKEND_PORT:-8000}/health" >/dev/null 2>&1 && echo "  Backend:   OK" || echo "  Backend:   not reachable"
-  curl -sf "http://localhost:5001/health" >/dev/null 2>&1 && echo "  MLflow:    OK" || echo "  MLflow:    not reachable"
+  curl -sf "http://localhost:5003/health" >/dev/null 2>&1 && echo "  MLflow:    OK" || echo "  MLflow:    not reachable"
   curl -sf "http://localhost:3001/api/health" >/dev/null 2>&1 && echo "  Grafana:   OK" || echo "  Grafana:   not reachable"
   curl -sf "http://localhost:9090/-/healthy" >/dev/null 2>&1 && echo "  Prometheus: OK" || echo "  Prometheus: not reachable"
 else

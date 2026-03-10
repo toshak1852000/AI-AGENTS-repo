@@ -38,6 +38,14 @@ class AlertSeverity(str, Enum):
     CRITICAL = "critical"
 
 
+class ReportFormat(str, Enum):
+    """Report output formats."""
+    PDF = "pdf"
+    EXCEL = "excel"
+    JSON = "json"
+    CSV = "csv"
+
+
 # Market data provider configurations
 MARKET_DATA_PROVIDERS: Dict[str, Dict[str, str]] = {
     MarketDataProvider.ALPHA_VANTAGE: {

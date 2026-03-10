@@ -3,7 +3,7 @@ import os
 import sys
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
-from alembic import context
+from alembic import context  # type: ignore[attr-defined]
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -22,6 +22,12 @@ if config.config_file_name is not None:
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
+    database_url = database_url.strip()
+    if not database_url.lower().startswith("postgresql"):
+        raise ValueError(
+            "DATABASE_URL must point to PostgreSQL; this project uses PostgreSQL end-to-end. "
+            "Current value does not start with 'postgresql'."
+        )
     config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
