@@ -144,13 +144,19 @@ It checks: git health, no tracked artifacts, dependency files, import verificati
 ## Step 11 — Safe push to GitHub
 
 - Do **not** use `--force` unless you have a documented reason and team agreement.
-- Push the current branch and set upstream if needed:
+- Push the current branch and set upstream if needed (run from a machine with GitHub credentials):
 
   ```bash
+  cd <repo_root>   # e.g. /home/ubuntu/portfolioQ
+  git fetch portfolioq
+  git merge portfolioq/feature/portfolioQbackup   # if behind
   git push portfolioq feature/portfolioQbackup
   # If first time pushing this branch:
   git push -u portfolioq feature/portfolioQbackup
   ```
+
+- **HTTPS:** If push fails with "could not read Username", set `git remote set-url portfolioq https://github.com/aistradit/portfolioq.git` and use a Personal Access Token when prompted.
+- **SSH:** Use `git@github.com:aistradit/portfolioq.git` and ensure your SSH key is added to GitHub.
 
 Confirm the remote branch is updated (e.g. on GitHub in the browser).
 
