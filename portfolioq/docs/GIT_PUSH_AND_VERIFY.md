@@ -11,28 +11,6 @@ This document describes how to push the current branch to **https://github.com/a
 
 ---
 
-## Step 0 — Backup branch and pre-push validation
-
-**Create a safety backup** (from repo root):
-
-```bash
-git branch backup-before-safe-push
-```
-
-**Run automated pre-push checks** (from repo root or from `portfolioq`):
-
-```bash
-# From repo root (parent of portfolioq):
-bash portfolioq/scripts/pre-push-validation.sh
-
-# Or from portfolioq:
-bash scripts/pre-push-validation.sh
-```
-
-This script checks: git health, no tracked venv/.env/artifacts, dependency files, import verification (Docker), and tests. Fix any failures before pushing.
-
----
-
 ## Step 1 — Push from repo root
 
 **Repository root:** The Git root is the **parent** of `portfolioq` (e.g. `~/portfolioQ`). All commands below are from that root.
@@ -136,8 +114,6 @@ bash scripts/validate-system-e2e.sh
 
 ## Checklist before push
 
-- [ ] Backup branch created: `git branch backup-before-safe-push`
-- [ ] Pre-push validation passed: `bash portfolioq/scripts/pre-push-validation.sh`
 - [ ] `git status` clean (or only intended changes committed)
 - [ ] `git fetch portfolioq` and merge/rebase if behind
 - [ ] Tests pass: `docker compose exec backend python -m pytest tests/ -q`
