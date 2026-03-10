@@ -40,8 +40,8 @@ def test_handle_missing():
 def test_detect_outliers():
     s = pd.Series([1, 2, 3, 4, 5, 100])
     mask = detect_outliers(s, "iqr")
-    assert mask.iloc[-1] is False  # 100 is outlier
-    assert mask.iloc[0] is True
+    assert mask.iloc[-1] == False  # 100 is outlier (use == for numpy/pandas bool)
+    assert mask.iloc[0] == True
 
 
 def test_clean_series():
