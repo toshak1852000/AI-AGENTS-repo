@@ -1,0 +1,5 @@
+# From repo root: docker compose up -d  (includes portfolioq/docker-compose.yml; paths resolved from portfolioq/)
+# Or: cd portfolioq && docker compose up -d
+name: portfolioq
+include:
+  - portfolioq/docker-compose.yml

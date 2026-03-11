@@ -1,6 +1,7 @@
-# Critical - Local configuration files
-docker-compose.yml
+# Critical - Local configuration (do not commit real secrets)
 .env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -94,8 +95,3 @@ mlflow.db
 *.tmp
 *.temp
 .cache/
-docs/
-scripts/
-# Prevent secrets and heavy/cache artifacts (DevOps-safe push)
-!.env.example
-.mlruns/
