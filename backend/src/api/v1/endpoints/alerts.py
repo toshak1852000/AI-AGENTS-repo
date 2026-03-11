@@ -1,34 +1,62 @@
 """Alert endpoints."""
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
+
+from src.schemas.alert import Alert, AlertListResponse, AlertUpdate
+from src.services import alert_service as svc
+from src.services.websocket_manager import manager
+import uuid
+import datetime
 
 router = APIRouter()
 
 
-@router.get("/")
-async def list_alerts():
-    """List all alerts."""
-    # TODO: Implement alert listing
-    return {"alerts": []}
+@router.get(
+    "/",
+    response_model=AlertListResponse,
+    summary="List alerts",
+    description="List all alerts with optional pagination, severity filtering, and unread toggles."
+)
+async def list_alerts(
+    skip: int = Query(0, ge=0, description="Number of items to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Page size"),
+    severity: Optional[str] = Query(None, description="Filter by severity (info, warning, critical)"),
+    unread_only: bool = Query(False, description="If true, only returns unread alerts")
+):
+    """List alerts according to filters."""
+    alerts, total = svc.list_alerts(skip=skip, limit=limit, severity=severity, unread_only=unread_only)
+    return AlertListResponse(total=total, skip=skip, limit=limit, alerts=alerts)
 
 
-@router.get("/{alert_id}")
+@router.get(
+    "/{alert_id}",
+    response_model=Alert,
+    summary="Get alert by ID",
+    responses={404: {"description": "Alert not found"}}
+)
 async def get_alert(alert_id: str):
     """Get an alert by ID."""
-    # TODO: Implement alert retrieval
-    return {"id": alert_id}
+    alert = svc.get_alert(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
 
 
-@router.put("/{alert_id}/read")
-async def mark_alert_read(alert_id: str):
-    """Mark an alert as read."""
-    # TODO: Implement alert marking
-    return {"id": alert_id, "read": True}
+@router.patch(
+    "/{alert_id}",
+    response_model=Alert,
+    summary="Update alert (read/dismiss)",
+    responses={404: {"description": "Alert not found"}}
+)
+async def update_alert(alert_id: str, payload: AlertUpdate):
+    """Update an alert, primarily used right now to mark it as read=True (dismissed)."""
+    alert = svc.update_alert(alert_id, payload)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
 
-from typing import Optional
+
 from pydantic import BaseModel
-from src.services.websocket_manager import manager
-import uuid
-import datetime
 
 class DummyAlert(BaseModel):
     title: str
@@ -36,7 +64,11 @@ class DummyAlert(BaseModel):
     severity: str = "info"
     channel: str = "system"
 
-@router.post("/trigger_dummy")
+@router.post(
+    "/trigger_dummy",
+    summary="Trigger dummy websocket push",
+    description="For testing live websocket broadcasts"
+)
 async def trigger_dummy_alert(alert: DummyAlert):
     """Trigger a dummy alert to push via websockets."""
     alert_resp = {
