@@ -1,0 +1,48 @@
+ 
+ 
+                                                                           PortfolioQ  
+ 
+Title:  Autonomous Market & Portfolio Scenario Analyst  
+ Professional  Summary  
+Enterprise -grade autonomous workﬂow  designed to evaluate the impact of market events, 
+commodity ﬂuctuations, and regulatory changes on portfolio holdings. Provides scenario -
+driven insights  for investment teams and board-level decision -making, linking market 
+movements to company -level exposure.  
+Core Functions & Capabilities  
+• Evaluate portfolio exposure to market, commodity, and regulatory changes  
+• Identify how scenarios affect individual holdings and sectors  
+• Detect emerging risks and potential strategic opportunities  
+• Generate automated, actionable insights for governance and oversight  
+• Track scenario triggers and provide real -time notiﬁcations for decision -makers  
+• Automated portfolio sensitivity modeling  
+• Market factor and regulatory impact assessment  
+• Quantitative and qualitative data integration  
+• Scenario -driven risk scoring and prioritization  
+• Scalable, repeatable, and audit -ready analytics pipelines  
+Autonomous Workﬂow  
+• Conducted automated scenario analysis evaluating portfolio sensitivity to 
+market, commodity, and regulatory changes  
+• Mapped company - and sector -level impacts to inform investment and risk 
+decisions  
+• Generated board-ready scenario reports highlighting potential risks, opportunities, and strategic actions  
+
+• Implemented continuous monitoring workﬂows for real -time alerts on emerging 
+portfolio risks  
+• Integrated quantitative and qualitative insights to optimize portfolio allocation 
+and support proactive decision-making  
+ 
+ Performance Metrics  
+• Portfolio Sensitivity Scores by market factor or scenario  
+• Company -Level Exposure Analysis  
+• Stress -Tested P&L Impact  
+• Risk & Opportunity Signal Frequency  
+• Scenario -Based Rebalancing Recommendations  
+ Value to FinTechs & Hedge Funds  
+• Provides proactive risk intelligence to guide investment decisions under 
+multiple scenarios  
+• Enables stress -testing portfolios  against market shocks, regulatory changes, 
+and geopolitical events  
+• Supports governance and board oversight  with actionable insights on 
+portfolio -level and company -level exposure  
+• Reduces manual analysis through end -to-end automated scenario evaluation  
+  
