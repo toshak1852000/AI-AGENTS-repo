@@ -25,6 +25,7 @@ class Report(ReportBase):
     scenario_id: Optional[str] = None
     file_path: Optional[str] = None
     download_url: Optional[str] = None
+    status: str = "pending"
     generated_at: datetime
 
     class Config:

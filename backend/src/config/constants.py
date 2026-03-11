@@ -94,6 +94,14 @@ SECTORS: List[str] = [
     "consumer_goods",
 ]
 
+class ReportFormat(str, Enum):
+    """Supported report output formats."""
+    PDF = "pdf"
+    EXCEL = "excel"
+    JSON = "json"
+    CSV = "csv"
+
+
 # Report formats
 REPORT_FORMATS: List[str] = [
     "pdf",
