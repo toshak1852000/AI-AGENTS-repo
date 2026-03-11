@@ -1,7 +1,6 @@
 """Report endpoints."""
 import os
-from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import FileResponse
 
 from src.schemas.report import Report, ReportCreate

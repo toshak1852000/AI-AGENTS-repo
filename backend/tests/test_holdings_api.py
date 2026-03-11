@@ -1,5 +1,4 @@
 """Tests for GET/POST/PUT/DELETE /api/v1/portfolios/{id}/holdings."""
-import pytest
 from fastapi.testclient import TestClient
 
 

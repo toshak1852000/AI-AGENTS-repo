@@ -1,6 +1,4 @@
 """Alert database models."""
-from sqlalchemy import Column, String, DateTime, Text, Boolean, ForeignKey
-from sqlalchemy.sql import func
 
 # TODO: Import Base from database when database setup is complete
 # from src.core.database import Base

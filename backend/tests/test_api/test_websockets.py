@@ -8,7 +8,7 @@ def test_websocket_no_auth():
     """Test connecting without a token fails."""
     # TestClient context manager for websockets
     try:
-        with client.websocket_connect("/api/v1/ws/alerts") as websocket:
+        with client.websocket_connect("/api/v1/ws/alerts") as _websocket:
             # Should raise WebSocketDisconnect due to 1008 policy violation
             pass
         assert False, "Should have disconnected"
@@ -20,7 +20,7 @@ def test_websocket_no_auth():
 def test_websocket_invalid_auth():
     """Test connecting with invalid token fails."""
     try:
-        with client.websocket_connect("/api/v1/ws/alerts?token=invalid_token") as websocket:
+        with client.websocket_connect("/api/v1/ws/alerts?token=invalid_token") as _websocket:
             pass
         assert False, "Should have disconnected"
     except Exception as e:

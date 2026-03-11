@@ -1,5 +1,5 @@
 """WebSocket endpoints for real-time alerts."""
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
 import logging
 from typing import Optional
 

@@ -1,4 +1,3 @@
-import pytest
 from datetime import datetime
 from src.schemas.scenario import Scenario, ScenarioCreate, ScenarioRun, ScenarioRunCreate
 from src.config.constants import ScenarioType
@@ -6,7 +5,6 @@ from src.config.constants import ScenarioType
 def test_scenario_schema():
     """Test scenario Pydantic schema validation."""
     data = {
-        "name": "Market Crash",
         "name": "Global Recession",
         "description": "A significant economic downturn across major markets.",
         "type": ScenarioType.MARKET_SHOCK,

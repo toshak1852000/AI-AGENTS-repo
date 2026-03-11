@@ -3,7 +3,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.services import scenario_service as svc
-from src.schemas.scenario import ScenarioCreate
 from src.config.constants import ScenarioType
 
 

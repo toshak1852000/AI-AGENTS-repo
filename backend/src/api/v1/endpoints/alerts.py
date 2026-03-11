@@ -1,12 +1,13 @@
 """Alert endpoints."""
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
+from pydantic import BaseModel
+import uuid
+import datetime
 
 from src.schemas.alert import Alert, AlertListResponse, AlertUpdate
 from src.services import alert_service as svc
 from src.services.websocket_manager import manager
-import uuid
-import datetime
 
 router = APIRouter()
 
@@ -55,8 +56,6 @@ async def update_alert(alert_id: str, payload: AlertUpdate):
         raise HTTPException(status_code=404, detail="Alert not found")
     return alert
 
-
-from pydantic import BaseModel
 
 class DummyAlert(BaseModel):
     title: str

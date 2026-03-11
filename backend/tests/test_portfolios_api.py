@@ -1,5 +1,4 @@
 """Tests for GET/POST/PUT/DELETE /api/v1/portfolios."""
-import pytest
 from fastapi.testclient import TestClient
 
 from src.services import portfolio_service as svc

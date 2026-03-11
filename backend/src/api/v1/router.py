@@ -1,5 +1,6 @@
 """API v1 router."""
 from fastapi import APIRouter
+from .endpoints import portfolios, scenarios, exposure, reports, alerts, websockets
 
 # Create API router
 api_router = APIRouter(prefix="/api/v1", tags=["api"])
@@ -14,9 +15,7 @@ async def api_root():
     }
 
 
-# Import and include endpoint routers
-from .endpoints import portfolios, scenarios, exposure, reports, alerts, websockets
-
+# Include endpoint routers
 api_router.include_router(portfolios.router, prefix="/portfolios", tags=["portfolios"])
 api_router.include_router(scenarios.router, prefix="/scenarios", tags=["scenarios"])
 api_router.include_router(exposure.router, prefix="/exposure", tags=["exposure"])

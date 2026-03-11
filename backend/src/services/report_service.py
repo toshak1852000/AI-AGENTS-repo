@@ -1,6 +1,5 @@
 """In-memory report service with real PDF/JSON/CSV report generation."""
 import csv
-import io
 import json
 import os
 import uuid
@@ -362,7 +361,7 @@ def _generate_csv_report(report_name: str, report_type: str, data: dict, file_pa
 def _generate_excel_report(report_name: str, report_type: str, data: dict, file_path: str) -> None:
     """Generate an Excel report using openpyxl."""
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.styles import Font, PatternFill, Border, Side
 
     wb = Workbook()
     ws = wb.active
@@ -519,7 +518,7 @@ def generate_report(payload: ReportCreate) -> Report:
             with open(file_path, "w") as f:
                 f.write(f"Report: {payload.name}\nType: {payload.type}\n")
         status = "completed"
-    except Exception as e:
+    except Exception:
         status = "failed"
         file_path = None
 

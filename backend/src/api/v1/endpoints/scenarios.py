@@ -1,10 +1,8 @@
 """Scenario endpoints."""
-import uuid
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 
-from src.workflows import run_workflow
 from src.schemas.scenario import (
     Scenario, 
     ScenarioCreate, 

@@ -1,5 +1,4 @@
 """Tests for portfolio version history API."""
-import pytest
 from fastapi.testclient import TestClient
 
 

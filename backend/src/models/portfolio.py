@@ -1,9 +1,4 @@
 """Portfolio database models."""
-from sqlalchemy import Column, String, DateTime, Text
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from datetime import datetime
-from typing import Optional
 
 # TODO: Import Base from database when database setup is complete
 # from src.core.database import Base
