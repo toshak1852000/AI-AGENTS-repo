@@ -1,0 +1,9 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.11.0, pytest-8.3.4, pluggy-1.6.0 -- D:\Stradit_AI\PortfoliQ\portfolioq\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Stradit_AI\PortfoliQ\portfolioq\backend
+configfile: pyproject.toml
+plugins: anyio-4.12.1, langsmith-0.5.0, asyncio-0.24.0
+asyncio: mode=Mode.STRICT, default_loop_scope=None
+collecting ... collected 1 item
+
