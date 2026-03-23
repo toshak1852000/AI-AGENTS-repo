@@ -1,0 +1,1 @@
+../backend/scripts/validate-system-e2e.sh

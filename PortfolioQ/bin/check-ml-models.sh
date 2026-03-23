@@ -1,0 +1,1 @@
+../backend/scripts/check-ml-models.sh

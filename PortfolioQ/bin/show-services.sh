@@ -1,0 +1,1 @@
+../backend/scripts/show-services.sh

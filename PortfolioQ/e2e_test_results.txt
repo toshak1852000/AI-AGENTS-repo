@@ -1,0 +1,334 @@
+==============================================
+  PortfolioQ — End-to-End Test Run
+  2026-03-23T23:33:10+05:30
+  BASE_URL: http://localhost:8000
+  Output file: /home/ubuntu/portfolioQ/PortfolioQ/e2e_test_results.txt
+==============================================
+
+>>> 1. Health and readiness
+--------------------------------------------------------------
+  OK Backend health
+{"status":"healthy","version":"1.0.0"}
+>>> 2. Validate all APIs (portfolios, scenarios, exposure, reports, alerts, ML)
+--------------------------------------------------------------
+==============================================
+  PortfolioQ — Validate All APIs
+  BASE_URL: http://localhost:8000
+==============================================
+
+>>> Prerequisites
+---
+[0;32m  OK[0m Backend reachable
+
+>>> Portfolios
+---
+[0;32m  OK[0m GET /portfolios/
+[0;32m  OK[0m GET /portfolios/ (existing data)
+[0;32m  OK[0m GET /portfolios/{id}
+
+>>> Scenarios
+---
+[0;32m  OK[0m GET /scenarios/
+[0;32m  OK[0m GET /scenarios/ (existing data)
+[0;32m  OK[0m GET /scenarios/{id}
+
+>>> Scenario run (workflow)
+---
+[0;32m  OK[0m POST /scenarios/{id}/run (status=completed, report_id present)
+
+>>> Reports
+---
+[0;32m  OK[0m GET /reports/
+[0;32m  OK[0m GET /reports/{id} (summary has risk_assessment, exposure_summary, top_holdings_at_risk)
+[0;32m  OK[0m GET /reports/{id}/download
+
+>>> Exposure
+---
+[0;32m  OK[0m GET /exposure/portfolio/{id}
+[0;32m  OK[0m POST /exposure/calculate
+[0;32m  OK[0m GET /exposure/risk-scores/portfolio/{id}
+
+>>> Alerts
+---
+[0;32m  OK[0m GET /alerts/
+[0;32m  OK[0m GET /alerts/summary/counts
+
+>>> ML
+---
+[0;32m  OK[0m GET /ml/status (all models fitted)
+[0;32m  OK[0m POST /ml/score
+[0;32m  OK[0m POST /ml/factor-betas
+
+[0;32m  OK[0m GET /portfolios/{id}/rebalancing-recommendations
+
+==============================================
+  Result: 20 passed, 0 failed
+==============================================
+
+>>> 3. ML models API check
+--------------------------------------------------------------
+==============================================
+  PortfolioQ — ML Models & API Check
+  BASE_URL: http://localhost:8000
+==============================================
+
+--- 1. GET /api/v1/ml/status ---
+[0;32m  OK[0m all models fitted (factor=True risk=True opp=True n_symbols=20)
+
+--- 2. POST /api/v1/ml/score ---
+[0;32m  OK[0m risk_score in [0,1], risk_level valid (score=0.3398 level=medium)
+
+--- 3. POST /api/v1/ml/factor-betas ---
+[0;32m  OK[0m factor betas returned for all symbols with expected factor keys
+
+--- 4. GET /api/v1/ml/mlflow-url ---
+[0;32m  OK[0m mlflow_url returned
+
+--- 5. POST /api/v1/ml/train (check response) ---
+[0;32m  OK[0m train endpoint responds with status
+
+--- 6. POST /api/v1/ml/retrain ---
+[0;32m  OK[0m retrain endpoint responds
+
+--- 7. POST /api/v1/ml/tune ---
+[0;32m  OK[0m tune endpoint responds
+
+==============================================
+  Result: 7 passed, 0 failed
+==============================================
+
+>>> 4. ML models end-to-end (scenario run + report)
+--------------------------------------------------------------
+==============================================
+  PortfolioQ — ML Models End-to-End Validation
+  BASE_URL: http://localhost:8000
+==============================================
+
+=== Phase 1: ML status & predictions ===
+
+--- 1.1 GET /api/v1/ml/status ---
+[0;32m  OK[0m all models fitted (factor, risk, opportunity)
+--- 1.2 POST /api/v1/ml/score ---
+[0;32m  OK[0m risk model prediction valid (score in [0,1], level in levels)
+--- 1.3 POST /api/v1/ml/factor-betas ---
+[0;32m  OK[0m factor model returns valid betas per symbol
+
+=== Phase 2: Scenario run (factor + risk + opportunity in pipeline) ===
+
+--- 2.1 POST /scenarios/{id}/run ---
+[0;32m  OK[0m scenario run completed, report_id=d1041f92-906e-4333-afa8-603f805b33dc
+
+=== Phase 3: Report ML outputs validation ===
+
+--- 3.1 GET /reports/{id} ---
+[0;32m  OK[0m report fetched
+--- 3.2 Risk assessment (risk model) in report ---
+[0;32m  OK[0m report contains risk_assessment (risk_score, risk_level)
+--- 3.3 Exposure summary (factor model) in report ---
+[0;32m  OK[0m report contains exposure_summary (factor/sensitivity)
+--- 3.4 Top holdings at risk (opportunity signals) ---
+[0;32m  OK[0m report contains top_holdings_at_risk list
+
+==============================================
+  Result: 8 passed, 0 failed
+==============================================
+
+>>> 5. Full system validation (18 steps)
+--------------------------------------------------------------
+
+##############################################################
+  PortfolioQ — Complete System Validation (18 Steps)
+  Root: /home/ubuntu/portfolioQ/PortfolioQ | API: http://localhost:8000
+  Constraints: PostgreSQL end-to-end; no Docker port changes
+##############################################################
+
+==============================================
+  STEP 1 — Project structure validation
+==============================================
+[0;32m  OK[0m backend/
+[0;32m  OK[0m configs/
+[0;32m  OK[0m scripts/
+[0;32m  OK[0m docs/
+[0;32m  OK[0m monitoring/
+[0;32m  OK[0m configs/config.yaml
+[0;32m  OK[0m configs/model_params.yaml
+[0;32m  OK[0m .env.example
+[0;32m  OK[0m docker-compose.yml
+[0;32m  OK[0m backend/requirements.txt
+[0;32m  OK[0m validate-all-apis.sh
+[0;32m  OK[0m validate-ml-models-e2e.sh
+[0;32m  OK[0m check-ml-models.sh
+[0;32m  OK[0m .env present
+
+==============================================
+  STEP 2 — Dependency verification
+==============================================
+[0;32m  OK[0m requirements.txt present with deps
+[0;32m  OK[0m Docker available
+[0;32m  OK[0m Docker Compose available
+[0;32m  OK[0m Backend reachable (deps in container)
+
+==============================================
+  STEP 3 — Configuration validation
+==============================================
+[0;32m  OK[0m config.yaml present
+[0;32m  OK[0m docker-compose uses postgresql
+[0;32m  OK[0m database.py enforces PostgreSQL
+[0;32m  OK[0m MLflow port 5003 in compose
+[0;32m  OK[0m MLflow port 5003 referenced
+[0;32m  OK[0m PostgreSQL port 5432 in compose
+[0;32m  OK[0m MLflow backend store is PostgreSQL (same DB)
+
+==============================================
+  STEP 4 — Data pipeline testing
+==============================================
+[0;32m  OK[0m services (data/ingestion) present
+[0;32m  OK[0m ml (feature/model) present
+[0;32m  OK[0m validation/schema code present
+
+==============================================
+  STEP 5 — ML training pipeline validation
+==============================================
+[0;32m  OK[0m POST /ml/train responds with status
+[0;32m  OK[0m POST /ml/retrain responds
+
+==============================================
+  STEP 6 — Model performance validation
+==============================================
+[0;32m  OK[0m All models fitted (factor, risk, opportunity)
+[0;32m  OK[0m Risk score in [0,1], level valid
+
+==============================================
+  STEP 7 — Experiment tracking validation
+==============================================
+[0;32m  OK[0m MLflow server health OK (port 5003)
+[0;32m  OK[0m MLflow healthy (experiments API optional until first run)
+
+==============================================
+  STEP 8 — Model registry validation
+==============================================
+[0;32m  OK[0m MLflow healthy (registry API optional until models registered)
+
+==============================================
+  STEP 9 — API and inference testing
+==============================================
+[0;32m  OK[0m validate-all-apis: all API checks passed
+[0;32m  OK[0m validate-ml-models-e2e: all checks passed
+
+==============================================
+  STEP 10 — Monitoring system validation
+==============================================
+[0;32m  OK[0m Prometheus healthy (9090)
+[0;32m  OK[0m Grafana healthy (3001)
+[0;32m  OK[0m Backend /metrics (Prometheus format)
+
+==============================================
+  STEP 11 — Dashboard validation
+==============================================
+[0;32m  OK[0m Grafana API health OK
+
+==============================================
+  STEP 12 — Docker and infrastructure testing
+==============================================
+[0;32m  OK[0m Postgres container running
+[0;32m  OK[0m MLflow container running
+[0;32m  OK[0m Backend container running
+[0;32m  OK[0m MLflow port 5003 unchanged in compose
+
+==============================================
+  STEP 13 — Alerting system test
+==============================================
+[0;32m  OK[0m GET /alerts/ returns list
+[0;32m  OK[0m GET /alerts/summary/counts returns dict
+
+==============================================
+  STEP 14 — Output validation
+==============================================
+[0;32m  OK[0m Report has risk_assessment, exposure_summary, top_holdings_at_risk
+
+==============================================
+  STEP 15 — Failure and edge case testing
+==============================================
+[0;32m  OK[0m Invalid scenario run returns error (4xx/5xx)
+[0;32m  OK[0m ML score with edge input does not crash
+
+==============================================
+  STEP 16 — Performance and load testing (light)
+==============================================
+[0;32m  OK[0m Multiple health checks succeed
+[0;32m  OK[0m ML status under load check
+
+==============================================
+  STEP 17 — Security and access checks
+==============================================
+[0;32m  OK[0m .env present; SECRET_KEY not obviously default
+[0;32m  OK[0m .env not tracked or gitignored
+[0;32m  OK[0m API endpoints exist; add auth in production
+
+==============================================
+  STEP 18 — Final system health report
+==============================================
+
+==============================================
+  FINAL RESULT
+==============================================
+  Passed:  55
+  Failed:  0
+  Warnings: 0
+==============================================
+  PostgreSQL: used end-to-end (app + MLflow; same DB).
+  Docker ports: unchanged (5003 MLflow, 5432 Postgres, 8000 Backend).
+==============================================
+[0;32m  All critical checks passed.[0m
+==============================================
+
+>>> 6. Backend import verification (Docker)
+--------------------------------------------------------------
+OK  settings
+OK  constants
+OK  database
+OK  models
+OK  schemas.portfolio
+OK  schemas.scenario
+OK  schemas.report
+OK  schemas.exposure
+OK  analytics.metrics
+OK  ml.mlflow_tracker
+OK  ml.factor_model
+OK  ml.risk_model
+OK  ml.opportunity_model
+OK  ml.training
+OK  evaluation.metrics
+OK  evaluation.reliability
+OK  data_validation.schema
+OK  data_validation.clean
+OK  data_validation.drift
+OK  monitoring.drift_monitor
+OK  feature_engineering
+OK  risk_scoring.engine
+OK  scenario_engine.engine
+OK  api.v1.router
+
+All imports succeeded.
+  OK All imports succeeded
+
+>>> 7. Backend unit tests (Docker)
+--------------------------------------------------------------
+.....................                                                    [100%]
+=============================== warnings summary ===============================
+../usr/local/lib/python3.11/site-packages/mlflow/utils/pydantic_utils.py:33
+  /usr/local/lib/python3.11/site-packages/mlflow/utils/pydantic_utils.py:33: PydanticDeprecatedSince212: Using `@model_validator` with mode='after' on a classmethod is deprecated. Instead, use an instance method. See the documentation at https://docs.pydantic.dev/2.12/concepts/validators/#model-after-validator. Deprecated in Pydantic V2.12 to be removed in V3.0.
+    return pydantic_model_validator(mode=mode)(func)
+
+../usr/local/lib/python3.11/site-packages/mlflow/gateway/config.py:454
+  /usr/local/lib/python3.11/site-packages/mlflow/gateway/config.py:454: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Route(ConfigModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+21 passed, 2 warnings in 2.55s
+  OK Tests passed
+
+==============================================
+  E2E test run finished at 2026-03-23T23:40:32+05:30
+  Full output saved to: /home/ubuntu/portfolioQ/PortfolioQ/e2e_test_results.txt
+==============================================

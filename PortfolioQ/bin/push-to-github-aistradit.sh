@@ -1,0 +1,1 @@
+../backend/scripts/push-to-github-aistradit.sh
