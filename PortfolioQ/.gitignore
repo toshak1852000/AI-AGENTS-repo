@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 
+# Local SSH key material (never commit)
+sshkey
+sshkey.pub
+
 # Python
 __pycache__/
 *.py[cod]
@@ -90,6 +94,9 @@ celerybeat.pid
 # MLflow
 mlruns/
 mlflow.db
+
+# Markdown
+*.md
 
 # Temporary files
 *.tmp
