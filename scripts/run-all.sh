@@ -1,0 +1,1 @@
+../backend/scripts/run-all.sh

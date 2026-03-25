@@ -1,0 +1,1 @@
+../backend/scripts/validate-all-apis.sh

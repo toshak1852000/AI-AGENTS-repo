@@ -1,0 +1,1 @@
+../backend/scripts/register_model.py

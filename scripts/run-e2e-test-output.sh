@@ -1,0 +1,1 @@
+../backend/scripts/run-e2e-test-output.sh

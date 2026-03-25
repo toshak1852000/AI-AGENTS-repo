@@ -1,0 +1,1 @@
+../backend/scripts/run-project-e2e.sh
