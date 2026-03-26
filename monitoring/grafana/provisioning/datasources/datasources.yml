@@ -8,14 +8,14 @@ datasources:
     isDefault: true
     editable: false
 
-  # Password must match POSTGRES_PASSWORD in .env (e.g. portfolioq_secure_2025)
+  # Password must match POSTGRES_PASSWORD in .env (Grafana expands ${VAR} at startup)
   - name: PostgreSQL
     type: postgres
     url: postgres:5432
     database: portfolioq
     user: portfolioq
     secureJsonData:
-      password: "portfolioq_secure_2025"
+      password: ${POSTGRES_PASSWORD:-portfolioq_secure_2025}
     jsonData:
       sslmode: disable
       maxOpenConns: 5

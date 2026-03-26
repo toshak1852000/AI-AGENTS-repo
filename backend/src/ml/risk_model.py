@@ -18,6 +18,7 @@ import xgboost as xgb
 import mlflow
 import mlflow.xgboost
 
+from src.analytics.metrics import record_ml_inference
 from src.ml.mlflow_tracker import (
     MLFLOW_EXPERIMENT_RISK,
     log_run_summary,
@@ -90,25 +91,29 @@ class RiskScoringModel:
 
     def predict_risk(self, features: dict[str, float]) -> dict[str, Any]:
         """Predict risk score and level for a set of features."""
-        if not self._is_fitted:
-            return self._fallback_risk(features)
+        t0 = time.perf_counter()
+        try:
+            if not self._is_fitted:
+                return self._fallback_risk(features)
 
-        # Build row with defaults for missing keys so partial feature dicts don't raise KeyError
-        row = {f: float(features.get(f, 0.0)) for f in FEATURES}
-        X = pd.DataFrame([row], columns=FEATURES)
-        proba = self.clf.predict_proba(X)[0]
-        class_idx = int(np.argmax(proba))
-        risk_level = str(self.le.classes_[class_idx])
+            # Build row with defaults for missing keys so partial feature dicts don't raise KeyError
+            row = {f: float(features.get(f, 0.0)) for f in FEATURES}
+            X = pd.DataFrame([row], columns=FEATURES)
+            proba = self.clf.predict_proba(X)[0]
+            class_idx = int(np.argmax(proba))
+            risk_level = str(self.le.classes_[class_idx])
 
-        # Continuous risk score: weighted sum of class indices / (n_classes-1)
-        n = len(self.le.classes_)
-        risk_score = float(np.sum(proba * np.arange(n)) / (n - 1))
+            # Continuous risk score: weighted sum of class indices / (n_classes-1)
+            n = len(self.le.classes_)
+            risk_score = float(np.sum(proba * np.arange(n)) / (n - 1))
 
-        return {
-            "risk_score": round(risk_score, 4),
-            "risk_level": risk_level,
-            "probabilities": {cls: round(float(p), 4) for cls, p in zip(self.le.classes_, proba)},
-        }
+            return {
+                "risk_score": round(risk_score, 4),
+                "risk_level": risk_level,
+                "probabilities": {cls: round(float(p), 4) for cls, p in zip(self.le.classes_, proba)},
+            }
+        finally:
+            record_ml_inference("risk_model", time.perf_counter() - t0)
 
     def _fallback_risk(self, features: dict[str, float]) -> dict[str, Any]:
         """Rule-based fallback when model is not fitted."""

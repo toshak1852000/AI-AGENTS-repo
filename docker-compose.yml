@@ -51,6 +51,13 @@ services:
       timeout: 10s
       retries: 5
 
+  # Celery metrics: workers push here; Prometheus scrapes this (API /metrics is separate).
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: portfolioq_pushgateway
+    ports:
+      - "${PUSHGATEWAY_PORT:-9091}:9091"
+
   prometheus:
     image: prom/prometheus:latest
     container_name: portfolioq_prometheus
@@ -59,6 +66,8 @@ services:
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    depends_on:
+      - pushgateway
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -146,6 +155,7 @@ services:
       - MLFLOW_TRACKING_URI=http://mlflow:5003
       - MODEL_STORE=/app/ml_models
       - REPORTS_DIR=/app/reports
+      - PROMETHEUS_PUSHGATEWAY=pushgateway:9091
       - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-}
       - FRED_API_KEY=${FRED_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -160,6 +170,8 @@ services:
         condition: service_healthy
       mlflow:
         condition: service_healthy
+      pushgateway:
+        condition: service_started
       backend:
         condition: service_started
     env_file:

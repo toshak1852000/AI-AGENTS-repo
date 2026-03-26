@@ -1,5 +1,7 @@
 """Market data Celery tasks."""
 import logging
+import time
+
 from src.tasks.celery_tasks import celery_app
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ def refresh_all_prices(self):
     from src.core.database import SessionLocal
     from src.models.portfolio import Holding
     from src.integrations.yahoo_finance import fetch_current_price
-    from src.analytics.metrics import MARKET_DATA_FETCH_TOTAL
+    from src.analytics.metrics import MARKET_DATA_FETCH_DURATION, MARKET_DATA_FETCH_TOTAL
 
     db = SessionLocal()
     updated = 0
@@ -28,7 +30,9 @@ def refresh_all_prices(self):
 
         for sym in symbols:
             try:
+                t0 = time.perf_counter()
                 price = fetch_current_price(sym)
+                MARKET_DATA_FETCH_DURATION.labels(provider="yfinance").observe(time.perf_counter() - t0)
                 if price:
                     for h in [h for h in holdings if h.symbol == sym]:
                         h.current_price = price
@@ -47,4 +51,7 @@ def refresh_all_prices(self):
         logger.error("refresh_all_prices failed: %s", exc)
         raise self.retry(exc=exc, countdown=60)
     finally:
+        from src.analytics.pushgateway import push_worker_metrics
+
+        push_worker_metrics()
         db.close()

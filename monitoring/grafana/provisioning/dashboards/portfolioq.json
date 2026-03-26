@@ -1,7 +1,7 @@
 {
   "title": "PortfolioQ — Enterprise Risk & Analytics",
   "uid": "portfolioq-main",
-  "version": 1,
+  "version": 3,
   "schemaVersion": 38,
   "timezone": "browser",
   "refresh": "1m",
@@ -239,12 +239,12 @@
     {
       "id": 40,
       "type": "table",
-      "title": "Sector Exposure Summary — Latest Scenario Runs",
+      "title": "Sector breakdown — latest exposure per portfolio (JSON)",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
       "datasource": "PostgreSQL",
       "options": { "sortBy": [{ "displayName": "exposure_pct", "desc": true }] },
       "targets": [{
-        "rawSql": "SELECT p.name AS portfolio, ROUND(e.risk_score::numeric, 3) AS risk_score, ROUND(e.total_exposure::numeric, 0) AS total_exposure, e.created_at FROM exposures e JOIN portfolios p ON e.portfolio_id = p.id ORDER BY e.created_at DESC LIMIT 15;",
+        "rawSql": "WITH latest AS ( SELECT DISTINCT ON (portfolio_id) id, portfolio_id, sector_exposures, risk_score, total_exposure, created_at FROM exposures ORDER BY portfolio_id, created_at DESC ) SELECT p.name AS portfolio, sec->>'sector' AS sector, ROUND(NULLIF(sec->>'exposure_pct','')::numeric, 4) AS exposure_pct, ROUND(NULLIF(sec->>'market_value','')::numeric, 0) AS sector_mv_usd, ROUND(latest.risk_score::numeric, 3) AS portfolio_risk_score, latest.created_at FROM latest JOIN portfolios p ON latest.portfolio_id = p.id CROSS JOIN LATERAL jsonb_array_elements(COALESCE(latest.sector_exposures::jsonb, '[]'::jsonb)) AS sec ORDER BY exposure_pct DESC NULLS LAST LIMIT 50;",
         "refId": "A",
         "format": "table"
       }]
@@ -264,11 +264,12 @@
     {
       "id": 50,
       "type": "timeseries",
-      "title": "ML Model Predictions Per Minute",
+      "title": "ML model predictions / min",
       "gridPos": { "h": 6, "w": 12, "x": 0, "y": 35 },
       "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 2 } },
       "targets": [{
-        "expr": "sum(rate(portfolioq_ml_predictions_total[1m])) by (model_name)",
+        "expr": "sum(rate(portfolioq_ml_predictions_total[5m])) by (model_name) * 60",
         "legendFormat": "{{model_name}}",
         "refId": "A"
       }]
@@ -289,26 +290,136 @@
     {
       "id": 60,
       "type": "table",
-      "title": "Top Holdings at Risk (Latest Risk Scores)",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 41 },
+      "title": "Holdings by scenario risk score (latest exposure JSON)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 41 },
       "datasource": "PostgreSQL",
       "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "displayMode": "auto" } },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "risk_level" },
+            "matcher": { "id": "byName", "options": "holding_risk_score" },
             "properties": [
-              { "id": "custom.displayMode", "value": "color-background" },
-              { "id": "mappings", "value": [
-                { "type": "value", "options": { "low": { "color": "green" }, "medium": { "color": "yellow" }, "high": { "color": "orange" }, "critical": { "color": "red" } } }
-              ]}
+              { "id": "custom.displayMode", "value": "lcd-gauge" },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 1 },
+              { "id": "color", "value": { "mode": "continuous-RdYlGr" } }
             ]
           }
         ]
       },
+      "options": { "sortBy": [{ "displayName": "holding_risk_score", "desc": true }] },
       "targets": [{
-        "rawSql": "SELECT p.name AS portfolio, h.symbol, h.company_name, h.sector, ROUND((h.quantity * COALESCE(h.current_price, h.average_price))::numeric, 0) AS market_value_usd, ROUND(h.current_price::numeric, 2) AS current_price, h.sector FROM holdings h JOIN portfolios p ON h.portfolio_id = p.id ORDER BY market_value_usd DESC NULLS LAST LIMIT 20;",
+        "rawSql": "WITH latest AS ( SELECT DISTINCT ON (portfolio_id) portfolio_id, company_exposures, created_at FROM exposures ORDER BY portfolio_id, created_at DESC ) SELECT p.name AS portfolio, h.symbol, h.company_name, h.sector, ROUND((ce->>'risk_score')::numeric, 4) AS holding_risk_score, ROUND((h.quantity * COALESCE(h.current_price, h.average_price))::numeric, 0) AS market_value_usd, ROUND(h.current_price::numeric, 2) AS current_price, latest.created_at AS exposure_at FROM latest JOIN portfolios p ON latest.portfolio_id = p.id JOIN holdings h ON h.portfolio_id = p.id CROSS JOIN LATERAL jsonb_array_elements(COALESCE(latest.company_exposures::jsonb, '[]'::jsonb)) AS ce WHERE (ce->>'symbol') = h.symbol ORDER BY (ce->>'risk_score')::numeric DESC NULLS LAST LIMIT 20;",
         "refId": "A",
         "format": "table"
+      }]
+    },
+    {
+      "id": 61,
+      "type": "timeseries",
+      "title": "Scenario run duration p95 (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 41 },
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(portfolioq_scenario_run_duration_seconds_bucket[5m])) by (le, scenario_type))",
+        "legendFormat": "p95 {{scenario_type}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 62,
+      "type": "timeseries",
+      "title": "Market data fetches / min (Prometheus)",
+      "description": "Celery refresh_all_prices: success vs error counts per scrape window.",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 49 },
+      "datasource": "Prometheus",
+      "targets": [{
+        "expr": "sum(rate(portfolioq_market_data_fetches_total[5m])) by (provider, status) * 60",
+        "legendFormat": "{{provider}} {{status}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 63,
+      "type": "timeseries",
+      "title": "Alerts created / min (Prometheus)",
+      "description": "Counter from report_generation when alerts are persisted.",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 49 },
+      "datasource": "Prometheus",
+      "targets": [{
+        "expr": "sum(rate(portfolioq_alerts_total[5m])) by (severity) * 60",
+        "legendFormat": "{{severity}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 64,
+      "type": "timeseries",
+      "title": "Reports generated / min (Prometheus)",
+      "description": "Counter by output format (json, pdf, excel).",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 49 },
+      "datasource": "Prometheus",
+      "targets": [{
+        "expr": "sum(rate(portfolioq_reports_generated_total[5m])) by (format) * 60",
+        "legendFormat": "{{format}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 65,
+      "type": "timeseries",
+      "title": "Market data fetch latency p95 (s)",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 55 },
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(portfolioq_market_data_fetch_duration_seconds_bucket[5m])) by (le, provider))",
+        "legendFormat": "p95 {{provider}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 66,
+      "type": "timeseries",
+      "title": "Latest portfolio risk score (Prometheus gauge)",
+      "description": "Set at end of successful scenario run (report_generation). One series per portfolio_id + scenario_type.",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 55 },
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "min": 0, "max": 1, "decimals": 3 } },
+      "targets": [{
+        "expr": "portfolioq_portfolio_risk_score",
+        "legendFormat": "{{portfolio_id}} / {{scenario_type}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 67,
+      "type": "timeseries",
+      "title": "Portfolio P&L impact USD (Prometheus gauge)",
+      "description": "Set with portfolio risk score at end of successful scenario run.",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 61 },
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0 } },
+      "targets": [{
+        "expr": "portfolioq_portfolio_pl_impact_dollars",
+        "legendFormat": "{{portfolio_id}} / {{scenario_type}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 68,
+      "type": "stat",
+      "title": "Unread alerts (Prometheus gauge)",
+      "description": "Updated when GET /alerts lists alerts (matches DB unread count when scraped). Uses instant query.",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 61 },
+      "datasource": "Prometheus",
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [{
+        "expr": "portfolioq_alerts_unread",
+        "refId": "A",
+        "instant": true,
+        "range": false
       }]
     }
   ]

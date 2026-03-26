@@ -52,6 +52,9 @@ def run_all_scheduled_scenarios(self):
 
         return {"completed": completed, "failed": failed}
     finally:
+        from src.analytics.pushgateway import push_worker_metrics
+
+        push_worker_metrics()
         db.close()
 
 
@@ -59,6 +62,11 @@ def run_all_scheduled_scenarios(self):
 def run_single_scenario(scenario_id: str, portfolio_ids: list):
     """Run a single scenario analysis (called on-demand)."""
     from src.workflows import run_workflow
+    from src.analytics.pushgateway import push_worker_metrics
+
     run_id = str(uuid.uuid4())
-    state = run_workflow(run_id=run_id, scenario_id=scenario_id, portfolio_ids=portfolio_ids)
-    return {"run_id": run_id, "status": state.get("status"), "report_id": state.get("report_id")}
+    try:
+        state = run_workflow(run_id=run_id, scenario_id=scenario_id, portfolio_ids=portfolio_ids)
+        return {"run_id": run_id, "status": state.get("status"), "report_id": state.get("report_id")}
+    finally:
+        push_worker_metrics()

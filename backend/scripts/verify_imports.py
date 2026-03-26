@@ -29,6 +29,7 @@ def main() -> int:
         ("src.schemas.report", "schemas.report"),
         ("src.schemas.exposure", "schemas.exposure"),
         ("src.analytics.metrics", "analytics.metrics"),
+        ("src.analytics.pushgateway", "analytics.pushgateway"),
         ("src.ml.mlflow_tracker", "ml.mlflow_tracker"),
         ("src.ml.factor_model", "ml.factor_model"),
         ("src.ml.risk_model", "ml.risk_model"),

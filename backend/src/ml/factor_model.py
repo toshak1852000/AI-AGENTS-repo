@@ -19,6 +19,7 @@ from sklearn.metrics import r2_score, mean_squared_error
 import mlflow
 import mlflow.sklearn
 
+from src.analytics.metrics import record_ml_inference
 from src.ml.mlflow_tracker import (
     MLFLOW_EXPERIMENT_FACTOR,
     MLFLOW_TRACKING_URI,
@@ -112,12 +113,16 @@ class FactorModel:
 
     def get_factor_betas(self, symbol: str, sector: str = "Unknown") -> dict[str, float]:
         """Return factor betas (loadings) for a symbol; fall back to sector defaults."""
-        if symbol not in self.models:
-            defaults = self.SECTOR_DEFAULT_BETAS.get(sector) or self.SECTOR_DEFAULT_BETAS["Unknown"]
-            return {f: float(defaults.get(f, 0.0)) for f in self.factor_names}
-        model = self.models[symbol]
-        betas = model.coef_
-        return {f: float(b) for f, b in zip(self.factor_names, betas)}
+        t0 = time.perf_counter()
+        try:
+            if symbol not in self.models:
+                defaults = self.SECTOR_DEFAULT_BETAS.get(sector) or self.SECTOR_DEFAULT_BETAS["Unknown"]
+                return {f: float(defaults.get(f, 0.0)) for f in self.factor_names}
+            model = self.models[symbol]
+            betas = model.coef_
+            return {f: float(b) for f, b in zip(self.factor_names, betas)}
+        finally:
+            record_ml_inference("factor_model", time.perf_counter() - t0)
 
     def scenario_pl_impact(
         self,

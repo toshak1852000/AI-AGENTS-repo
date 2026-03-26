@@ -9,13 +9,14 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
+  # FastAPI (HTTP + ML + scenario metrics updated in API process)
   - job_name: portfolioq_backend
     static_configs:
       - targets: ["backend:8000"]
     metrics_path: /metrics
 
-  - job_name: portfolioq_celery
-    static_configs:
-      - targets: ["backend:8000"]
-    metrics_path: /metrics
+  # Celery workers push to Pushgateway; same metric names, different instance labels
+  - job_name: pushgateway
     honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]

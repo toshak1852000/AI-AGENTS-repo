@@ -30,7 +30,8 @@ SCENARIO_RUN_DURATION = Histogram(
     "portfolioq_scenario_run_duration_seconds",
     "Scenario analysis run duration",
     ["scenario_type"],
-    buckets=(1, 5, 10, 30, 60, 120, 300),
+    # Sub-minute runs are common; include small buckets for accurate p95 in Grafana
+    buckets=(0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600),
 )
 
 PORTFOLIO_RISK_SCORE = Gauge(
@@ -108,6 +109,12 @@ MARKET_DATA_FETCH_DURATION = Histogram(
     ["provider"],
     buckets=(0.5, 1, 2, 5, 10, 30),
 )
+
+
+def record_ml_inference(model_name: str, duration_sec: float) -> None:
+    """Increment prediction counter and observe inference latency (Prometheus / Grafana)."""
+    ML_MODEL_PREDICTIONS.labels(model_name=model_name).inc()
+    ML_INFERENCE_DURATION.labels(model_name=model_name).observe(max(0.0, float(duration_sec)))
 
 
 def get_metrics_response():

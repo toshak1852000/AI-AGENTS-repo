@@ -16,6 +16,7 @@ from sklearn.preprocessing import StandardScaler
 import mlflow
 import mlflow.sklearn
 
+from src.analytics.metrics import record_ml_inference
 from src.ml.mlflow_tracker import (
     MLFLOW_EXPERIMENT_OPPORTUNITY,
     log_run_summary,
@@ -85,52 +86,56 @@ class OpportunityModel:
 
     def score_holding(self, features: dict[str, float]) -> dict[str, Any]:
         """Score a single holding's opportunity/risk profile."""
-        if not self._is_fitted:
-            return self._rule_based_signal(features)
+        t0 = time.perf_counter()
+        try:
+            if not self._is_fitted:
+                return self._rule_based_signal(features)
 
-        # Coerce to float so API/callers passing int or None don't break
-        row = {}
-        for f in OPPORTUNITY_FEATURES:
-            v = features.get(f, 0.0)
+            # Coerce to float so API/callers passing int or None don't break
+            row = {}
+            for f in OPPORTUNITY_FEATURES:
+                v = features.get(f, 0.0)
+                try:
+                    row[f] = float(v) if v is not None else 0.0
+                except (TypeError, ValueError):
+                    row[f] = 0.0
+            X = pd.DataFrame([row], columns=OPPORTUNITY_FEATURES)
+            X_scaled = self.scaler.transform(X)
+            raw_score = float(self.model.score_samples(X_scaled)[0])
+            pred = int(self.model.predict(X_scaled)[0])
+
+            normalized = (raw_score - (-0.5)) / 0.5  # approx range
+            normalized = max(0.0, min(1.0, normalized))
+
             try:
-                row[f] = float(v) if v is not None else 0.0
+                risk_score = float(features.get("risk_score", 0.5) or 0.5)
             except (TypeError, ValueError):
-                row[f] = 0.0
-        X = pd.DataFrame([row], columns=OPPORTUNITY_FEATURES)
-        X_scaled = self.scaler.transform(X)
-        raw_score = float(self.model.score_samples(X_scaled)[0])
-        pred = int(self.model.predict(X_scaled)[0])
+                risk_score = 0.5
+            try:
+                pl_pct = float(features.get("pl_impact_pct", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                pl_pct = 0.0
 
-        normalized = (raw_score - (-0.5)) / 0.5  # approx range
-        normalized = max(0.0, min(1.0, normalized))
+            if pred == -1 and pl_pct > 0.01:
+                signal = "strong_buy"
+            elif pred == -1 and pl_pct < -0.05:
+                signal = "sell"
+            elif risk_score > 0.7:
+                signal = "reduce"
+            elif risk_score > 0.4:
+                signal = "hold"
+            else:
+                signal = "buy" if pl_pct > 0 else "hold"
 
-        try:
-            risk_score = float(features.get("risk_score", 0.5) or 0.5)
-        except (TypeError, ValueError):
-            risk_score = 0.5
-        try:
-            pl_pct = float(features.get("pl_impact_pct", 0.0) or 0.0)
-        except (TypeError, ValueError):
-            pl_pct = 0.0
-
-        if pred == -1 and pl_pct > 0.01:
-            signal = "strong_buy"
-        elif pred == -1 and pl_pct < -0.05:
-            signal = "sell"
-        elif risk_score > 0.7:
-            signal = "reduce"
-        elif risk_score > 0.4:
-            signal = "hold"
-        else:
-            signal = "buy" if pl_pct > 0 else "hold"
-
-        return {
-            "anomaly_score": round(raw_score, 4),
-            "is_anomaly": pred == -1,
-            "signal": signal,
-            "signal_description": SIGNAL_TYPES[signal],
-            "opportunity_score": round(normalized, 4),
-        }
+            return {
+                "anomaly_score": round(raw_score, 4),
+                "is_anomaly": pred == -1,
+                "signal": signal,
+                "signal_description": SIGNAL_TYPES[signal],
+                "opportunity_score": round(normalized, 4),
+            }
+        finally:
+            record_ml_inference("opportunity_model", time.perf_counter() - t0)
 
     def _rule_based_signal(self, features: dict[str, float]) -> dict[str, Any]:
         try:

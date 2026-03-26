@@ -9,6 +9,8 @@ API_ML="$BASE_URL/api/v1/ml"
 API_PF="$BASE_URL/api/v1/portfolios"
 API_SC="$BASE_URL/api/v1/scenarios"
 API_REP="$BASE_URL/api/v1/reports"
+# Workflow pulls market data + runs ML; 120s is often too short. Override: SCENARIO_RUN_CURL_MAXTIME=0 (curl: no limit)
+SCENARIO_RUN_CURL_MAXTIME="${SCENARIO_RUN_CURL_MAXTIME:-600}"
 PASS=0
 FAIL=0
 
@@ -85,25 +87,71 @@ echo ""
 echo "=== Phase 2: Scenario run (factor + risk + opportunity in pipeline) ==="
 echo ""
 
-# Get first portfolio and scenario
-PID=$(curl -sf "$API_PF/" 2>/dev/null | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print(d[0]['id'] if d else '')
-" 2>/dev/null)
-SCID=$(curl -sf "$API_SC/" 2>/dev/null | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print(d[0]['id'] if d else '')
-" 2>/dev/null)
+# Match validate-all-apis: ensure portfolio + at least one holding, and a scenario (workflow needs data)
+echo "--- 2.0 Ensure portfolio with holdings + scenario exist ---"
+PF_LIST=$(curl -sf "$API_PF/" 2>/dev/null) || PF_LIST="[]"
+PF_COUNT=$(echo "$PF_LIST" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+if [ "${PF_COUNT:-0}" -eq 0 ]; then
+  CREATE_PF=$(curl -sf -X POST "$API_PF/" -H "Content-Type: application/json" \
+    -d '{"name":"ML E2E Portfolio","description":"validate-ml-models-e2e seed"}' 2>/dev/null)
+  PID=$(echo "$CREATE_PF" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
+  [ -n "$PID" ] && ok "created portfolio $PID" || fail "could not create portfolio"
+else
+  PID=$(echo "$PF_LIST" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')" 2>/dev/null)
+  ok "using existing portfolio (first in list)"
+fi
+if [ -n "$PID" ]; then
+  N_HOLD=$(curl -sf "$API_PF/$PID/holdings" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null || echo "0")
+  if [ "${N_HOLD:-0}" -eq 0 ]; then
+    if curl -sf -X POST "$API_PF/$PID/holdings" -H "Content-Type: application/json" \
+      -d '{"symbol":"AAPL","company_name":"Apple Inc","quantity":50,"average_price":150,"sector":"Technology"}' >/dev/null 2>&1; then
+      ok "added default holding (AAPL) to portfolio"
+    else
+      fail "could not add holding to portfolio $PID"
+    fi
+  else
+    ok "portfolio has holdings ($N_HOLD)"
+  fi
+fi
+
+SC_LIST=$(curl -sf "$API_SC/" 2>/dev/null) || SC_LIST="[]"
+SC_COUNT=$(echo "$SC_LIST" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+if [ "${SC_COUNT:-0}" -eq 0 ]; then
+  CREATE_SC=$(curl -sf -X POST "$API_SC/" -H "Content-Type: application/json" \
+    -d '{"name":"ML E2E Scenario","description":"validate-ml-models-e2e","type":"market_shock","parameters":{"shock_pct":-0.05}}' 2>/dev/null)
+  SCID=$(echo "$CREATE_SC" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
+  [ -n "$SCID" ] && ok "created scenario $SCID" || fail "could not create scenario"
+else
+  SCID=$(echo "$SC_LIST" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')" 2>/dev/null)
+  ok "using existing scenario (first in list)"
+fi
+echo ""
 
 if [ -z "$PID" ] || [ -z "$SCID" ]; then
-  fail "no portfolio or scenario found (create one first)"
+  fail "no portfolio or scenario available after seed step"
   REPORT_ID=""
 else
-  echo "--- 2.1 POST /scenarios/{id}/run ---"
-  RUN=$(curl -sf --max-time 120 -X POST "$API_SC/$SCID/run" -H "Content-Type: application/json" \
-    -d "{\"portfolio_ids\":[\"$PID\"]}" 2>/dev/null)
+  echo "--- 2.1 POST /scenarios/{id}/run (curl max-time=${SCENARIO_RUN_CURL_MAXTIME}s; set SCENARIO_RUN_CURL_MAXTIME=0 for no limit) ---"
+  _tmp_run="$(mktemp)"
+  # First attempt (no -f: capture error JSON body on 4xx/5xx)
+  HTTP_CODE=$(curl -sS -o "$_tmp_run" -w "%{http_code}" ${SCENARIO_RUN_CURL_MAXTIME:+"--max-time" "$SCENARIO_RUN_CURL_MAXTIME"} \
+    -X POST "$API_SC/$SCID/run" -H "Content-Type: application/json" \
+    -d "{\"portfolio_ids\":[\"$PID\"]}" 2>/dev/null) || HTTP_CODE="000"
+  RUN=$(cat "$_tmp_run" 2>/dev/null || true)
+  rm -f "$_tmp_run"
+  HTTP_CODE="${HTTP_CODE:-000}"
+  # Retry once on empty body or non-2xx (transient market-data / load)
+  if [ -z "$RUN" ] || [ "$HTTP_CODE" != "200" ]; then
+    sleep 4
+    _tmp_run="$(mktemp)"
+    HTTP_CODE=$(curl -sS -o "$_tmp_run" -w "%{http_code}" ${SCENARIO_RUN_CURL_MAXTIME:+"--max-time" "$SCENARIO_RUN_CURL_MAXTIME"} \
+      -X POST "$API_SC/$SCID/run" -H "Content-Type: application/json" \
+      -d "{\"portfolio_ids\":[\"$PID\"]}" 2>/dev/null) || HTTP_CODE="000"
+    RUN=$(cat "$_tmp_run" 2>/dev/null || true)
+    rm -f "$_tmp_run"
+    HTTP_CODE="${HTTP_CODE:-000}"
+  fi
+
   RUN_STATUS=$(echo "$RUN" | python3 -c "
 import sys,json
 d=json.load(sys.stdin)
@@ -112,12 +160,27 @@ print(d.get('status',''))
   REPORT_ID=$(echo "$RUN" | python3 -c "
 import sys,json
 d=json.load(sys.stdin)
-print(d.get('report_id',''))
+print(d.get('report_id') or '')
 " 2>/dev/null)
+  DETAIL=$(echo "$RUN" | python3 -c "
+import sys,json
+try:
+  d=json.load(sys.stdin)
+  print(d.get('detail', d.get('error', '')) or '')
+except Exception:
+  print('')
+" 2>/dev/null)
+
   if [ "$RUN_STATUS" = "completed" ] && [ -n "$REPORT_ID" ]; then
     ok "scenario run completed, report_id=$REPORT_ID"
   else
-    fail "scenario run status=$RUN_STATUS report_id=$REPORT_ID"
+    if [ -z "$RUN" ]; then
+      fail "scenario run: empty response (http=$HTTP_CODE; timeout or unreachable). Try SCENARIO_RUN_CURL_MAXTIME=0 or a larger value."
+    elif [ "$RUN_STATUS" = "failed" ] || [ "$RUN_STATUS" = "unknown" ]; then
+      fail "scenario run status=$RUN_STATUS report_id=$REPORT_ID detail=${DETAIL:-none} http=$HTTP_CODE"
+    else
+      fail "scenario run status=$RUN_STATUS report_id=$REPORT_ID detail=${DETAIL:-none} http=$HTTP_CODE"
+    fi
   fi
 fi
 echo ""

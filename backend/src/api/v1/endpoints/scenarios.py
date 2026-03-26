@@ -1,4 +1,5 @@
 """Scenario CRUD and run endpoints."""
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -10,7 +11,7 @@ from src.core.database import get_db
 from src.models.scenario import Scenario, ScenarioRun
 from src.schemas.scenario import ScenarioCreate, ScenarioUpdate, Scenario as ScenarioSchema
 from src.workflows import run_workflow
-from src.analytics.metrics import SCENARIO_RUNS_TOTAL
+from src.analytics.metrics import SCENARIO_RUNS_TOTAL, SCENARIO_RUN_DURATION
 
 router = APIRouter()
 
@@ -112,7 +113,9 @@ def run_scenario(
 
     SCENARIO_RUNS_TOTAL.labels(scenario_type=sc.type, status="started").inc()
 
+    _t_run = time.perf_counter()
     final_state = run_workflow(run_id=run_id, scenario_id=scenario_id, portfolio_ids=portfolio_ids)
+    SCENARIO_RUN_DURATION.labels(scenario_type=sc.type).observe(time.perf_counter() - _t_run)
 
     # Update run record
     run_record.status = final_state.get("status", "unknown")
